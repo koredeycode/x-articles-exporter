@@ -643,7 +643,7 @@ export const generatePDF = async (
   })
   
   // Save
-  const filename = `${sanitizeText(metadata.title).substring(0, 30)}.pdf`
+  const filename = `${sanitizeText(metadata.author.toUpperCase())} - ${sanitizeText(metadata.title)}.pdf`
   doc.save(filename)
 }
 
