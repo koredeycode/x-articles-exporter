@@ -102,19 +102,72 @@ function extractMetadata() {
   return { title, author, handle, date, url: window.location.href }
 }
 
-async function convertImageToBase64(url: string): Promise<string | null> {
+function createPlaceholderImage(text: string = 'Image Failed'): string {
   try {
-    const response = await fetch(url)
-    const blob = await response.blob()
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })
-  } catch (err) {
-    console.error('[X Articles Exporter] Failed to load image:', url, err)
-    return null
+    const canvas = document.createElement('canvas')
+    canvas.width = 400
+    canvas.height = 300 // 4:3 Aspect Ratio
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return ''
+
+    // Background
+    ctx.fillStyle = '#F7F9F9'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Border
+    ctx.strokeStyle = '#CFD9DE'
+    ctx.lineWidth = 4
+    ctx.strokeRect(0, 0, canvas.width, canvas.height)
+
+    // Cross icon
+    ctx.beginPath()
+    ctx.moveTo(canvas.width / 2 - 20, canvas.height / 2 - 20)
+    ctx.lineTo(canvas.width / 2 + 20, canvas.height / 2 + 20)
+    ctx.moveTo(canvas.width / 2 + 20, canvas.height / 2 - 20)
+    ctx.lineTo(canvas.width / 2 - 20, canvas.height / 2 + 20)
+    ctx.strokeStyle = '#E0245E' // X Red
+    ctx.lineWidth = 4
+    ctx.stroke()
+
+    // Text
+    ctx.fillStyle = '#536471'
+    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'top'
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 40)
+
+    return canvas.toDataURL('image/png')
+  } catch (e) {
+    return ''
   }
+}
+
+async function convertImageToBase64(url: string, retries = 3): Promise<string | null> {
+  let attempt = 0
+  while (attempt < retries) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      
+      const blob = await response.blob()
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(blob)
+      })
+    } catch (err) {
+      attempt++
+      console.warn(`[X Articles Exporter] Image load failed (Attempt ${attempt}/${retries}):`, url, err)
+      
+      if (attempt >= retries) {
+          console.error('[X Articles Exporter] Failed to load image after retries:', url)
+          return createPlaceholderImage('Image Could Not Load')
+      }
+      // Simple backoff: 1s, 2s...
+      await new Promise(r => setTimeout(r, 1000 * attempt))
+    }
+  }
+  return null
 }
 
 // Recursive Rich Text Extraction
@@ -159,12 +212,14 @@ function extractRichText(node: Node): TextSegment[] {
 }
 
 // Main Content Extraction
-async function extractArticleContent(): Promise<{ content: ContentBlock[], coverImage: string | null }> {
+async function extractArticleContent(onProgress?: (status: string) => void): Promise<{ content: ContentBlock[], coverImage: string | null }> {
   const content: ContentBlock[] = []
   let coverImage: string | null = null
   const richTextView = document.querySelector(SELECTORS.richTextView)
   
   if (!richTextView) return { content, coverImage: null }
+
+  onProgress?.('Analysing content...')
 
   // Detect Cover Image
   const articleView = document.querySelector(SELECTORS.articleView)
@@ -218,7 +273,14 @@ async function extractArticleContent(): Promise<{ content: ContentBlock[], cover
   
   // Extract Body Images
   const contentImages = Array.from(richTextView.querySelectorAll(SELECTORS.articleImage))
+  let processedImages = 0
+  const totalImages = contentImages.length
+
   for (const img of contentImages) {
+     if (totalImages > 0) {
+        onProgress?.(`Processing Images (${processedImages}/${totalImages})...`)
+     }
+
      const src = (img as HTMLImageElement).src
      if (!src) continue
      
@@ -232,6 +294,10 @@ async function extractArticleContent(): Promise<{ content: ContentBlock[], cover
           block: { type: 'image', src: base64 },
           node: img
        })
+     }
+     processedImages++
+     if (totalImages > 0) {
+        onProgress?.(`Processing Images (${processedImages}/${totalImages})...`)
      }
   }
 
@@ -266,7 +332,9 @@ async function handleExportClick() {
     const settings = storage.settings || { theme: 'light', pageSize: 'a4' }
     
     const metadata = extractMetadata()
-    const { content, coverImage } = await extractArticleContent()
+    const { content, coverImage } = await extractArticleContent((status) => {
+       button.innerHTML = `${ICONS.loading} ${status}`
+    })
     
     await generatePDF(metadata, { content, coverImage }, settings, (status) => {
       button.innerHTML = `${ICONS.loading} ${status}`
