@@ -15,7 +15,9 @@ const SELECTORS = {
   userName: '[data-testid="User-Name"]',
   richTextView: '[data-testid="twitterArticleRichTextView"]',
   articleImage: '[data-testid="tweetPhoto"] img',
-  tweetTime: 'time[datetime]'
+  tweetTime: 'time[datetime]',
+  videoPlayer: '[data-testid="videoPlayer"]',
+  tweet: '[data-testid="tweet"]'
 }
 
 const EXPORT_BUTTON_ID = 'x-articles-exporter-btn'
@@ -29,10 +31,14 @@ export interface TextSegment {
 }
 
 export interface ContentBlock {
-  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image'
+  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
   text?: string
   segments?: TextSegment[]
   src?: string
+  link?: string // For video/tweet links
+  author?: string // For embed-tweet
+  handle?: string // For embed-tweet
+  date?: string // For embed-tweet
 }
 
 // Icons
@@ -271,6 +277,63 @@ async function extractArticleContent(onProgress?: (status: string) => void): Pro
     }
   }
   
+  // Extract Videos
+  const videos = Array.from(richTextView.querySelectorAll(SELECTORS.videoPlayer))
+  for (const video of videos) {
+    onProgress?.(`Processing Videos...`)
+    
+    // Attempt to find poster/thumbnail
+    const videoEl = video.querySelector('video')
+    let poster = videoEl?.getAttribute('poster')
+    
+    if (!poster) {
+       // Check for background image on a sibling or parent if standard poster isn't there
+       // Often X uses a div with background-image for the poster
+       const bgImg = video.querySelector('[style*="background-image"]')
+       if (bgImg) {
+          const match = (bgImg as HTMLElement).style.backgroundImage.match(/url\("?(.*?)"?\)/)
+          if (match) poster = match[1]
+       }
+    }
+
+    if (poster) {
+       const base64 = await convertImageToBase64(poster)
+       if (base64) {
+          // Find link
+          const link = video.closest('a')?.href || video.querySelector('a')?.href || window.location.href
+          
+          items.push({
+             block: { type: 'video', src: base64, link },
+             node: video
+          })
+       }
+    }
+  }
+
+  // Extract Embedded Tweets
+  const tweets = Array.from(richTextView.querySelectorAll(SELECTORS.tweet))
+  for (const tweet of tweets) {
+     onProgress?.(`Processing Embeds...`)
+     
+     const text = tweet.querySelector('[data-testid="tweetText"]')?.textContent || ''
+     const authorName = tweet.querySelector('[data-testid="User-Name"]')?.textContent?.split('@')[0]?.trim() || 'Unknown'
+     const handle = tweet.querySelector('[data-testid="User-Name"] a')?.getAttribute('href')?.replace('/', '@') || ''
+      const link = (tweet.querySelector('a[href*="/status/"]') as HTMLAnchorElement)?.href || ''
+    
+     if (text) {
+        items.push({
+           block: { 
+             type: 'embed-tweet', 
+             text, 
+             author: authorName, 
+             handle,
+             link
+           },
+           node: tweet
+        })
+     }
+  }
+
   // Extract Body Images
   const contentImages = Array.from(richTextView.querySelectorAll(SELECTORS.articleImage))
   let processedImages = 0
@@ -283,10 +346,9 @@ async function extractArticleContent(onProgress?: (status: string) => void): Pro
 
      const src = (img as HTMLImageElement).src
      if (!src) continue
-     
-     // Deduplicate: Don't add if it's the cover image? 
-     // Although user might want it twice if it appears in body.
-     // We will leave it.
+
+     // Deduplicate: Skip images inside video players or embedded tweets to avoid double rendering
+     if (img.closest(SELECTORS.videoPlayer) || img.closest(SELECTORS.tweet)) continue
      
      const base64 = await convertImageToBase64(src)
      if (base64) {

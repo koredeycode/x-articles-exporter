@@ -36,10 +36,14 @@ export interface TextSegment {
 }
 
 export interface ContentBlock {
-  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image'
+  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
   text?: string
   segments?: TextSegment[]
   src?: string
+  link?: string
+  author?: string
+  handle?: string
+  date?: string
 }
 
 // PDF Constants (Default / Base)
@@ -443,12 +447,17 @@ export const generatePDF = async (
            contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 6, contentY, MAX_W - 6, config.fonts.body, colors.text)
            contentY += 2
            break
-           
-        case 'image':
+                case 'image':
            if (block.src) {
                try {
                   const maxH = 120
-                  if (contentY + 50 > config.pageHeight - config.margin) {
+                  const props = doc.getImageProperties(block.src)
+                  const ratio = props.height / props.width
+                  let w = MAX_W
+                  let h = w * ratio
+                  if (h > maxH) { h = maxH; w = h / ratio; }
+
+                  if (contentY + h > config.pageHeight - config.margin) {
                       doc.addPage()
                       currentPageIndex++
                       doc.setFillColor(colors.bg)
@@ -456,15 +465,124 @@ export const generatePDF = async (
                       contentY = config.margin
                   }
                   
+                  doc.addImage(block.src, 'JPEG', X_POS, contentY, w, h)
+                  contentY += h + 10
+              } catch (e) {}
+           }
+           break
+
+        case 'video':
+           if (block.src) {
+              try {
+                  const maxH = 120
                   const props = doc.getImageProperties(block.src)
                   const ratio = props.height / props.width
                   let w = MAX_W
                   let h = w * ratio
                   if (h > maxH) { h = maxH; w = h / ratio; }
-                  
+
+                  if (contentY + h > config.pageHeight - config.margin) {
+                      doc.addPage()
+                      currentPageIndex++
+                      doc.setFillColor(colors.bg)
+                      doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+                      contentY = config.margin
+                  }
+
+                  // Draw Poster
                   doc.addImage(block.src, 'JPEG', X_POS, contentY, w, h)
+                  
+                  // Draw Play Overlay
+                  doc.setFillColor(0, 0, 0)
+                  doc.saveGraphicsState()
+                  doc.setGState(new (doc as any).GState({ opacity: 0.4 }))
+                  doc.circle(X_POS + w/2, contentY + h/2, 10, 'F')
+                  doc.restoreGraphicsState()
+                  
+                  // Draw Play Icon (White Triangle)
+                  doc.setFillColor(255, 255, 255)
+                  doc.triangle(
+                    X_POS + w/2 - 3, contentY + h/2 - 5,
+                    X_POS + w/2 - 3, contentY + h/2 + 5,
+                    X_POS + w/2 + 5, contentY + h/2,
+                    'F'
+                  )
+
+                  // Link
+                  if (block.link) {
+                      doc.link(X_POS, contentY, w, h, { url: block.link })
+                  }
+
                   contentY += h + 10
               } catch (e) {}
+           }
+           break
+
+        case 'embed-tweet':
+           // Render Tweet Card
+           const CARD_PADDING = 10
+           const CARD_W = MAX_W
+           
+           // Calculate Exact Height First
+           doc.setFont(fonts.body, 'normal')
+           doc.setFontSize(10)
+           
+           let textHeight = 0
+           let splitText: string[] = []
+           
+           if (block.text) {
+               splitText = doc.splitTextToSize(block.text, CARD_W - (CARD_PADDING * 2))
+               textHeight = (splitText.length * 5) // Line height approx
+           }
+           
+           // Header (Author) Height + Padding + Text + Padding
+           const headerHeight = 16 
+           const totalCardHeight = headerHeight + textHeight + (CARD_PADDING * 2)
+           
+           if (contentY + totalCardHeight > config.pageHeight - config.margin) {
+               doc.addPage()
+               currentPageIndex++
+               doc.setFillColor(colors.bg)
+               doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+               contentY = config.margin
+           }
+
+           const startY = contentY
+           
+           // Card Border
+           doc.setDrawColor(colors.border)
+           doc.setLineWidth(0.5)
+           doc.roundedRect(X_POS, startY, CARD_W, totalCardHeight, 3, 3, 'S')
+           
+           let innerY = startY + CARD_PADDING
+           
+           // Author
+           doc.setFont(fonts.ui, 'bold')
+           doc.setFontSize(10)
+           doc.setTextColor(colors.text)
+           doc.text(block.author || (block.handle || 'Tweet'), X_POS + CARD_PADDING, innerY)
+           
+           if (block.handle) {
+               doc.setFont(fonts.ui, 'normal')
+               doc.setTextColor(colors.secondary)
+               doc.text(` ${block.handle}`, X_POS + CARD_PADDING + doc.getTextWidth(block.author || '') + 2, innerY)
+           }
+           innerY += 6
+
+           // Text
+           doc.setFont(fonts.body, 'normal')
+           doc.setFontSize(10)
+           doc.setTextColor(colors.text)
+           
+           if (block.text && splitText.length > 0) {
+               doc.text(splitText, X_POS + CARD_PADDING, innerY + 4)
+           }
+
+           contentY = startY + totalCardHeight + 10
+
+           // Link
+           if (block.link) {
+               doc.link(X_POS, startY, CARD_W, totalCardHeight, { url: block.link })
            }
            break
      }
