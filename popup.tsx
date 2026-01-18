@@ -191,7 +191,7 @@ function IndexPopup() {
 
       {/* Footer */}
       <div className="footer">
-        v1.1.0 • Privacy-focused • All data stays local
+        v0.0.1 • Privacy-focused • All data stays local
       </div>
     </div>
   )
