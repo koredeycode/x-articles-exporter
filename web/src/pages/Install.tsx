@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom'
 
 export function Install() {
   const [activeTab, setActiveTab] = useState<'install' | 'build'>('install')
-  const [copied, setCopied] = useState(false)
+  const [copiedStep, setCopiedStep] = useState<string | null>(null)
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, stepId: string) => {
     navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopiedStep(stepId)
+    setTimeout(() => setCopiedStep(null), 2000)
   }
 
   return (
@@ -86,16 +86,16 @@ export function Install() {
             <div className="step-group">
               <div className="step">
                 <div className="step-number">01</div>
-                <div className="step-content">
+                <div className="step-content">    
                   <h3>Clone the repository</h3>
                   <div className="code-block">
                     <div className="code-header">
                       <span>Terminal</span>
-                      <button onClick={() => copyToClipboard('git clone https://github.com/korecodes/x-articles-exporter.git')} className="copy-btn">
-                        {copied ? 'Copied!' : 'Copy'}
+                      <button onClick={() => copyToClipboard('git clone https://github.com/korecodes/x-articles-exporter.git', 'step1')} className="copy-btn">
+                        {copiedStep === 'step1' ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <pre>git clone https://github.com/korecodes/x-articles-exporter.git</pre>
+                    <pre><span className="token-cmd">git</span> <span className="token-arg">clone</span> https://github.com/korecodes/x-articles-exporter.git</pre>
                   </div>
                 </div>
               </div>
@@ -107,11 +107,11 @@ export function Install() {
                   <div className="code-block">
                     <div className="code-header">
                       <span>Terminal</span>
-                      <button onClick={() => copyToClipboard('cd x-articles-exporter/extension')} className="copy-btn">
-                        {copied ? 'Copied!' : 'Copy'}
+                      <button onClick={() => copyToClipboard('cd x-articles-exporter/extension', 'step2')} className="copy-btn">
+                        {copiedStep === 'step2' ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <pre>cd x-articles-exporter/extension</pre>
+                    <pre><span className="token-cmd">cd</span> <span className="token-arg">x-articles-exporter/extension</span></pre>
                   </div>
                 </div>
               </div>
@@ -123,11 +123,11 @@ export function Install() {
                   <div className="code-block">
                     <div className="code-header">
                       <span>Terminal</span>
-                      <button onClick={() => copyToClipboard('pnpm install')} className="copy-btn">
-                        {copied ? 'Copied!' : 'Copy'}
+                      <button onClick={() => copyToClipboard('pnpm install', 'step3')} className="copy-btn">
+                        {copiedStep === 'step3' ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <pre>pnpm install</pre>
+                    <pre><span className="token-cmd">pnpm</span> <span className="token-arg">install</span></pre>
                   </div>
                 </div>
               </div>
@@ -139,11 +139,11 @@ export function Install() {
                   <div className="code-block">
                     <div className="code-header">
                       <span>Terminal</span>
-                      <button onClick={() => copyToClipboard('pnpm build')} className="copy-btn">
-                        {copied ? 'Copied!' : 'Copy'}
+                      <button onClick={() => copyToClipboard('pnpm build', 'step4')} className="copy-btn">
+                        {copiedStep === 'step4' ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <pre>pnpm build</pre>
+                    <pre><span className="token-cmd">pnpm</span> <span className="token-arg">build</span></pre>
                   </div>
                   <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>The built extension will be in the <code>extension/build/chrome-mv3-prod</code> directory.</p>
                 </div>

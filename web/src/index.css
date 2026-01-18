@@ -247,6 +247,9 @@ code {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .doc-nav {
@@ -373,6 +376,27 @@ code {
   .doc-content {
     padding: 2rem 1.5rem;
   }
+
+  /* Mobile Step Layout */
+  .step {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .step::after {
+    display: none;
+  }
+
+  .step-number {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .step-content {
+    padding-bottom: 0;
+  }
 }
 
 .step-group {
@@ -384,18 +408,39 @@ code {
 
 .step {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row; /* Side-by-side on desktop */
+  gap: 2rem;
+  position: relative;
+}
+
+/* Connector Line */
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 20px; /* Center of the 40px circle */
+  top: 40px; /* Start below the circle */
+  bottom: -32px; /* Extend to the next circle */
+  width: 2px;
+  background: var(--border);
+  z-index: 0;
 }
 
 .step-number {
   font-family: 'JetBrains Mono', monospace;
-  color: var(--primary);
-  opacity: 0.5;
-  font-size: 1.5rem;
+  color: var(--bg-dark); /* Number color inside the circle */
+  background: var(--primary);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1; /* Override previous opacity */
+  font-size: 1rem;
   font-weight: 700;
   flex-shrink: 0;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
+  z-index: 1; /* Ensure circle is above line */
 }
 
 .step-content {
@@ -403,6 +448,7 @@ code {
   min-width: 0;
   width: 100%;
   max-width: 100%;
+  padding-bottom: 2rem;
 }
 
 .step-content h3 {
@@ -474,3 +520,60 @@ code {
   max-width: 100%;
 }
 
+.token-cmd {
+  color: #ff7eb6; /* Pink/Red for command */
+  font-weight: 700;
+}
+
+.token-arg {
+  color: #7ee787; /* Green for arguments */
+}
+
+.token-flag {
+  color: #79c0ff; /* Blue for flags */
+}
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem 0;
+  margin-top: auto;
+  background: var(--bg-card);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.copyright {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: var(--text-main);
+}
+
+@media (max-width: 600px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+}
