@@ -23,8 +23,12 @@ A privacy-focused browser extension that allows you to save your favorite long-f
 
 ## 🚀 How to Use
 
-1. **Install the Extension** (load the unpacked extension in Chrome/Edge/Brave).
-2. **Navigate to an Article**: Go to any X Article page (e.g., `https://x.com/username/article/...`).
+1. **Install the Extension**:
+   - Download the extension zip from our [Landing Page](https://x-articles-exporter.vercel.app/).
+   - Unzip the file.
+   - Go to `chrome://extensions`, enable **Developer Mode**, and click **Load Unpacked**.
+   - Select the extracted folder.
+2. **Navigate to an Article**: Go to any X Article page.
 3. **Click Export**: Look for the **"Export to PDF"** button injected into the bottom-right corner of the page.
    - *Shortcut*: You can also press `Alt + P` to trigger the export.
 4. **Customize**: Click the extension icon in your browser toolbar to change settings:
@@ -42,9 +46,13 @@ This project is built with [Plasmo](https://docs.plasmo.com/), a modern framewor
 
 ### Getting Started
 
-1. Clone the repository.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/korecodes/x-articles-exporter.git
+   ```
 2. Install dependencies:
    ```bash
+   cd x-articles-exporter/extension
    pnpm install
    ```
 3. Run the development server:
@@ -53,17 +61,19 @@ This project is built with [Plasmo](https://docs.plasmo.com/), a modern framewor
    ```
 4. Open your browser's extension management page (e.g., `chrome://extensions`).
    - Enable "Developer Mode".
-   - Click "Load unpacked" and select the `build/chrome-mv3-dev` folder from this project.
+   - Click "Load unpacked" and select the `build/chrome-mv3-dev` folder from `extension/`.
 
 ### Building for Production
 
 To create a production-ready bundle:
 
 ```bash
+cd extension
 pnpm build
+pnpm package
 ```
 
-The output will be in the `build/chrome-mv3-prod` directory, ready to be zipped and published.
+The output zip will be in the `extension/build` directory.
 
 ## 📄 Output Format
 
@@ -85,4 +95,4 @@ The generated PDF includes:
 
 ## 📄 License
 
-MIT
+MIT © [Yusuf Akorede](https://github.com/korecodes)
