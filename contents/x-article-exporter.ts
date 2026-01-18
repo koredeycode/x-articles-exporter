@@ -48,7 +48,7 @@ const BUTTON_STYLES = `
   #${EXPORT_BUTTON_ID} {
     position: fixed;
     bottom: 30px;
-    right: 30px;
+    right: 100px;
     z-index: 9999;
     background-color: #1D9BF0;
     color: white;
@@ -87,7 +87,7 @@ function isArticlePage(): boolean {
 function extractMetadata() {
   const title = document.querySelector(SELECTORS.articleTitle)?.textContent?.trim() || 'Untitled Article'
   const userNameEl = document.querySelector(SELECTORS.userName)
-  let author = 'Unknown Author'
+  let author = 'X Article'
   let handle = ''
   
   if (userNameEl) {
