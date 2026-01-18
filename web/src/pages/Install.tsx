@@ -46,7 +46,7 @@ export function Install() {
             
             <div className="step-group">
               <div className="step">
-                <div className="step-number">01</div>
+                <div className="step-number">01</div> 
                 <div className="step-content">
                   <h3>Download & Extract</h3>
                   <p>Download the latest version of the extension and extract the zip file to a safe location on your computer.</p>
