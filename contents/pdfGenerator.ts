@@ -17,6 +17,7 @@ declare module 'jspdf' {
 export interface Settings {
   theme: 'light' | 'dark'
   pageSize: 'a4' | 'letter'
+  font: 'serif' | 'serif'
 }
 
 interface ArticleMetadata {
@@ -96,7 +97,7 @@ export const generatePDF = async (
   metadata: ArticleMetadata,
   content: { content: ContentBlock[], coverImage: string | null },
   settings: Settings,
-  coverImage?: string | null
+  onProgress?: (status: string) => void
 ): Promise<void> => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -104,13 +105,21 @@ export const generatePDF = async (
     format: settings.pageSize
   })
   
-  const articleCover = coverImage || content.coverImage
+  onProgress?.('Preparing PDF...')
+
+  const articleCover = content.coverImage // simplified
   const isDark = settings.theme === 'dark'
+  const isSerif = settings.font === 'serif'
+
+  // Font Selection
+  const fonts = {
+    title: isSerif ? 'times' : 'helvetica',
+    body: isSerif ? 'times' : 'helvetica', 
+    heading: isSerif ? 'times' : 'helvetica', 
+    ui: 'helvetica' // Keep UI elements (badges, author labels) in Sans for readability/style
+  }
   
   // Custom Color Palette for Sidebar Design
-  // Reference image has a dark teal sidebar. Let's try to simulate a nice "Book" look
-  // while keeping X themes.
-  // Actually, let's stick to the Themes but maybe make the sidebar distinct.
   const colors = isDark ? {
     bg: '#000000',
     sidebar: '#16181C', 
@@ -120,71 +129,20 @@ export const generatePDF = async (
     border: '#38444D'
   } : {
     bg: '#FFFFFF',
-    sidebar: '#2C3E50', // Trying the Dark Slate form the image for Light Mode sidebar?
-                       // Or maybe just a soft gray? 
-                       // The user reference is white page + dark sidebar.
-                       // Let's use a Dark Sidebar for Light Mode to match the "Design" request.
+    sidebar: '#2C3E50', // Dark Slate Blue for Light Mode Sidebar
     text: '#0F1419',
     secondary: '#536471',
     accent: '#1D9BF0',
     border: '#CFD9DE'
   }
-  
+
   // Override for specific design look
   if (!isDark) {
-      colors.sidebar = '#34495E' // Dark Slate Blue
-  }
-
-  // Helper: Draw Layout (Background + Sidebar + Footer)
-  const drawPageLayout = (type: 'title' | 'standard', pageNum?: number, totalPages?: number) => {
-    // 1. Background
-    doc.setFillColor(colors.bg)
-    doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), 'F')
-    
-    if (type === 'standard') {
-      // 2. Sidebar
-      doc.setFillColor(colors.sidebar)
-      doc.rect(0, 0, PDF_CONFIG.sidebarWidth, PDF_CONFIG.pageHeight, 'F')
-      
-      // 3. Footer Line
-      doc.setDrawColor(colors.secondary)
-      doc.setLineWidth(0.5)
-      // Line from Content Start to End
-      doc.line(
-         PDF_CONFIG.contentStart, 
-         PDF_CONFIG.pageHeight - 20, 
-         PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
-         PDF_CONFIG.pageHeight - 20
-      )
-      
-      // 4. Footer Text (Book/Article Title)
-      doc.setFont('times', 'italic') // Serif for footer
-      doc.setFontSize(9)
-      doc.setTextColor(colors.secondary)
-      
-      const footerTitle = metadata.title.length > 50 ? metadata.title.substring(0, 50) + '...' : metadata.title
-      doc.text(
-         footerTitle, 
-         PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
-         PDF_CONFIG.pageHeight - 15, 
-         { align: 'right' }
-      )
-      
-      // 5. Page Number (In sidebar?? Or bottom center?)
-      // Image doesn't show page number in footer.
-      // Let's put Page Number in the Sidebar, Bottom Left!
-      if (pageNum) {
-         doc.setFont('helvetica', 'bold')
-         doc.setFontSize(12)
-         // Contrast color for sidebar
-         doc.setTextColor(isDark ? '#FFFFFF' : '#FFFFFF') 
-         doc.text(`${pageNum}`, PDF_CONFIG.sidebarWidth / 2, PDF_CONFIG.pageHeight - 15, { align: 'center' })
-      }
-    }
+      colors.sidebar = '#34495E' 
   }
 
   // --- 1. Title Page (Custom Design) ---
-  // --- 1. Title Page (Custom Design) ---
+  onProgress?.('Generating Title Page...')
   // Background Color for Title Page
   doc.setFillColor(colors.sidebar)
   doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
@@ -192,25 +150,18 @@ export const generatePDF = async (
   const TITLE_START_X = PDF_CONFIG.margin + 10
   let currentY = PDF_CONFIG.margin + 30
   
-  // Text Colors - Reverting to High Contrast based on Theme
-  // If Dark Mode (Black BG) -> White Text
-  // If Light Mode (Dark Slate Sidebar BG) -> White Text (because Sidebar color is dark)
-  // Actually, we forced `colors.sidebar` in Light Mode to be `#34495E` (Dark Slate Blue).
-  // So regardless of Theme, the Title Page BG is Dark.
-  // So Text should be White/Light.
-  
   const titlePageTextMain = '#FFFFFF'
-  const titlePageTextSecondary = '#E5E7EB' // Light Gray
+  const titlePageTextSecondary = '#E5E7EB' 
   
-  // 1. Author Name (Top Left)
-  doc.setFont('helvetica', 'normal') 
+  // 1. Author Name
+  doc.setFont(fonts.ui, 'normal') 
   doc.setFontSize(11)
   doc.setTextColor(titlePageTextSecondary)
   doc.text(metadata.author.toUpperCase(), TITLE_START_X, currentY, { charSpace: 1.5 })
   currentY += 15
   
   // 2. Title with Accent Bar
-  doc.setFont('helvetica', 'bold')
+  doc.setFont(fonts.title, 'bold')
   const titleFontSize = 42
   doc.setFontSize(titleFontSize)
   doc.setTextColor(titlePageTextMain)
@@ -222,12 +173,12 @@ export const generatePDF = async (
   
   // Accent Bar
   doc.setFillColor(colors.accent)
-  doc.rect(TITLE_START_X, currentY - 8, 4, titleBlockHeight + 2, 'F') // Thicker bar
+  doc.rect(TITLE_START_X, currentY - 8, 4, titleBlockHeight + 2, 'F') 
   doc.text(titleLines, TITLE_START_X + TITLE_X_OFFSET, currentY)
   
   currentY += titleBlockHeight + 20
   
-  // 3. Cover Image (Middle - Before Metadata)
+  // 3. Cover Image 
   if (articleCover) {
      try {
         const imgProps = doc.getImageProperties(articleCover)
@@ -243,11 +194,11 @@ export const generatePDF = async (
      }
   }
   
-  // 4. Metadata (Bottom Left)
+  // 4. Metadata
   let metaY = PDF_CONFIG.pageHeight - 60
   if (currentY > metaY) metaY = currentY + 10
   
-  doc.setFont('helvetica', 'bold')
+  doc.setFont(fonts.ui, 'bold')
   doc.setFontSize(9)
   doc.setTextColor(titlePageTextSecondary)
   
@@ -264,7 +215,6 @@ export const generatePDF = async (
   metaY += 4
   doc.setFontSize(9)
   doc.setTextColor(colors.accent)
-  // Changed Link Text to "Read on X"
   doc.textWithLink('Read on X', TITLE_START_X, metaY, { url: metadata.url })
 
   // 5. Badge Footer (Linked)
@@ -273,18 +223,16 @@ export const generatePDF = async (
   const fullBadgeText = badgeTextMain + badgeHandle
   
   doc.setFontSize(7)
-  doc.setFont('helvetica', 'bold')
+  doc.setFont(fonts.ui, 'bold')
   const fWidth = doc.getTextWidth(fullBadgeText) + 12
   const fHeight = 8
   const fX = PDF_CONFIG.pageWidth - fWidth - 10
   const fY = PDF_CONFIG.pageHeight - fHeight - 10
   
-  // Draw Outline
   doc.setDrawColor(titlePageTextSecondary)
   doc.setLineWidth(0.3)
   doc.rect(fX, fY, fWidth, fHeight) 
   
-  // Render Text
   doc.setTextColor(titlePageTextSecondary)
   doc.text(badgeTextMain, fX + 6, fY + 5.5)
   
@@ -295,13 +243,12 @@ export const generatePDF = async (
   doc.link(fX, fY, fWidth, fHeight, { url: 'https://x.com/korecodes' })
 
   // --- 2. Content Generation ---
+  onProgress?.('Formatting Content...')
   doc.addPage()
-  // Draw MAIN Background Only (White/Black) for readability during generation
   doc.setFillColor(colors.bg)
   doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
   
   let currentPageIndex = 2
-  // REMOVED drawPageLayout here. We will apply sidebar/footer overlay at end.
   
   let contentY = PDF_CONFIG.margin
   
@@ -323,7 +270,6 @@ export const generatePDF = async (
           if (currentY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) { 
               targetDoc.addPage()
               currentPageIndex++
-              // Draw BG
               if (targetDoc === doc) {
                   targetDoc.setFillColor(colors.bg)
                   targetDoc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
@@ -336,7 +282,7 @@ export const generatePDF = async (
       if (!segments || segments.length === 0) {
           if (!text) return startY
           targetDoc.setTextColor(baseColor)
-          targetDoc.setFont('helvetica', 'normal') 
+          targetDoc.setFont(fonts.body, 'normal') 
           const lines = splitTextToWidth(targetDoc, text, maxWidth, fontSize)
           
           let curY = startY
@@ -344,15 +290,7 @@ export const generatePDF = async (
           
           for (const line of lines) {
               const nextY = curY + lh
-              if (nextY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
-                  curY = checkAndAddPage(nextY)
-                  // checkAndAddPage returns margin if added, but we need to reset curY logic
-                  // Actually checkAndAddPage updates doc internal state? No. 
-                  // It adds page. We need to update curY.
-                  // My helper above returns new Y (margin) or old Y.
-                  // But `lh` is added in loop.
-              }
-              // Proper Re-implementation of Add Page Logic inline for simplicity
+              // Proper Re-implementation of Add Page Logic inline
               if (curY + lh > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
                   targetDoc.addPage()
                   currentPageIndex++
@@ -379,7 +317,7 @@ export const generatePDF = async (
          else if (seg.isBold) fontStyle = 'bold'
          else if (seg.isItalic) fontStyle = 'italic'
          
-         targetDoc.setFont('helvetica', fontStyle)
+         targetDoc.setFont(fonts.body, fontStyle)
          targetDoc.setFontSize(fontSize)
          if (seg.link) targetDoc.setTextColor(colors.accent)
          else targetDoc.setTextColor(baseColor)
@@ -409,7 +347,13 @@ export const generatePDF = async (
   }
 
   // Iterate Blocks
+  let blockIndex = 0
   for (const block of content.content) {
+     blockIndex++
+     if (blockIndex % 5 === 0) {
+        onProgress?.(`Processing Block ${blockIndex}/${content.content.length}...`)
+     }
+
      if (contentY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
         doc.addPage()
         currentPageIndex++
@@ -424,11 +368,8 @@ export const generatePDF = async (
      switch (block.type) {
         case 'heading1':
            doc.setFontSize(PDF_CONFIG.fonts.heading1)
-           doc.setFont('times', 'bold') 
+           doc.setFont(fonts.heading, 'bold') 
            doc.setTextColor(colors.text)
-           // Store RELATIVE page index (from content start)
-           // CurrentPageIndex starts at 2. 
-           // We will map this to final page number later.
            tocEntries.push({ 
               text: block.text || '', page: currentPageIndex, level: 1 
            })
@@ -438,7 +379,7 @@ export const generatePDF = async (
            
         case 'heading2':
            doc.setFontSize(PDF_CONFIG.fonts.heading2)
-           doc.setFont('times', 'bold')
+           doc.setFont(fonts.heading, 'bold')
            tocEntries.push({ 
               text: block.text || '', page: currentPageIndex, level: 2 
            })
@@ -504,6 +445,7 @@ export const generatePDF = async (
   }
 
   // --- 3. TOC Page Injection and Post-Processing ---
+  onProgress?.('Generating Table of Contents...')
   const ITEMS_PER_PAGE_TOC = 20 // Approx safety limit
   const ENTRY_HEIGHT = 12
   const TOC_TITLE_HEIGHT = 40
@@ -521,11 +463,7 @@ export const generatePDF = async (
   }
 
   // --- 4. Content Page Number Fix via Post-Loop ---
-  // Now we have all pages.
-  // Page 1 = Title
-  // Page 2 to 1+TOC = TOC
-  // Page 2+TOC to End = Content
-  
+  onProgress?.('Finalizing Pages...')
   const totalPages = doc.getNumberOfPages()
   
   // Apply Sidebar and Page Numbers to ALL Standard Pages (TOC + Content)
@@ -547,7 +485,7 @@ export const generatePDF = async (
       )
       
       // Footer Title
-      doc.setFont('times', 'italic')
+      doc.setFont(fonts.ui, 'italic')
       doc.setFontSize(9)
       doc.setTextColor(colors.secondary)
       
@@ -560,7 +498,7 @@ export const generatePDF = async (
       )
       
       // Page Number
-      doc.setFont('helvetica', 'bold')
+      doc.setFont(fonts.ui, 'bold')
       doc.setFontSize(12)
       doc.setTextColor(isDark ? '#FFFFFF' : '#FFFFFF') 
       doc.text(`${p}`, PDF_CONFIG.sidebarWidth / 2, PDF_CONFIG.pageHeight - 15, { align: 'center' })
@@ -572,13 +510,13 @@ export const generatePDF = async (
   
   doc.setPage(2)
   // TOC Title
-  doc.setFont('times', 'normal')
+  doc.setFont(fonts.title, 'normal')
   doc.setFontSize(32)
   doc.setTextColor(colors.text)
   doc.text('TABLE OF CONTENTS', PDF_CONFIG.contentStart, tocY)
   tocY += 25
   
-  doc.setFont('times', 'normal')
+  doc.setFont(fonts.body, 'normal')
   doc.setFontSize(12)
   
   tocEntries.forEach((entry, i) => {
@@ -605,23 +543,18 @@ export const generatePDF = async (
       const prefix = entry.level === 1 ? `${roman(i+1).padEnd(5)}` : '  '
       const title = entry.text.length > 55 ? entry.text.substring(0, 55) + '...' : entry.text
       
-      // Update Page Number for Link
-      // Entry.page was "Initial Content Page Index" (starting at 2)
-      // NOW, because we inserted 'tocPagesCount' pages at index 2...
-      // The content that WAS at Page 2 is moved by 'tocPagesCount'
-      // So new page number = old_page + tocPagesCount.
       const targetPageNum = entry.page + tocPagesCount
       
       const ROW_Y = tocY
       
       doc.setTextColor(colors.text)
-      doc.setFont('times', 'normal')
+      doc.setFont(fonts.body, 'normal')
       doc.text(prefix, PDF_CONFIG.contentStart, ROW_Y)
       
       const titleX = PDF_CONFIG.contentStart + 15
       
       doc.setTextColor(colors.accent)
-      doc.setFont('times', 'bold')
+      doc.setFont(fonts.body, 'bold')
       doc.text(title, titleX, ROW_Y)
       
       const textWidth = doc.getTextWidth(title)
@@ -630,7 +563,7 @@ export const generatePDF = async (
       doc.line(titleX, ROW_Y + 1, titleX + textWidth, ROW_Y + 1)
       
       doc.setTextColor(colors.text)
-      doc.setFont('times', 'normal')
+      doc.setFont(fonts.body, 'normal')
       doc.text(
          `${targetPageNum}`, 
          PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
@@ -643,6 +576,7 @@ export const generatePDF = async (
   })
   
   // Save
+  onProgress?.('Saving PDF...')
   const filename = `${sanitizeText(metadata.author.toUpperCase())} - ${sanitizeText(metadata.title)}.pdf`
   doc.save(filename)
 }

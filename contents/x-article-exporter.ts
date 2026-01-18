@@ -268,7 +268,9 @@ async function handleExportClick() {
     const metadata = extractMetadata()
     const { content, coverImage } = await extractArticleContent()
     
-    await generatePDF(metadata, { content, coverImage }, settings)
+    await generatePDF(metadata, { content, coverImage }, settings, (status) => {
+      button.innerHTML = `${ICONS.loading} ${status}`
+    })
     
     // Set Success State
     button.innerHTML = `${ICONS.success} Saved!`
@@ -315,12 +317,16 @@ function checkAndInject() {
 function setupObserver() {
   checkAndInject()
   let lastUrl = window.location.href
-  new MutationObserver(() => {
-    if (window.location.href !== lastUrl || document.body) {
-      lastUrl = window.location.href
-      setTimeout(checkAndInject, 500)
-    }
-  }).observe(document.body, { childList: true, subtree: true })
+  let timeoutId: NodeJS.Timeout
+  const handleMutation = () => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => {
+      checkAndInject()
+    }, 500) // Debounce by 500ms
+  }
+
+  const observer = new MutationObserver(handleMutation)
+  observer.observe(document.body, { childList: true, subtree: true })
 }
 
 window.addEventListener('keydown', (e) => {
