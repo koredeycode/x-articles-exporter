@@ -17,7 +17,7 @@ declare module 'jspdf' {
 export interface Settings {
   theme: 'light' | 'dark'
   pageSize: 'a4' | 'letter'
-  font: 'serif' | 'serif'
+  font: 'serif' | 'sans'
 }
 
 interface ArticleMetadata {
@@ -42,14 +42,11 @@ export interface ContentBlock {
   src?: string
 }
 
-// PDF Constants
-const PDF_CONFIG = {
-  pageWidth: 210, 
-  pageHeight: 297,
+// PDF Constants (Default / Base)
+const BASE_CONFIG = {
   margin: 20,
   sidebarWidth: 35, // Width of the colored sidebar
   contentStart: 50, // Start X for content (35 sidebar + 15 padding)
-  get contentWidth() { return this.pageWidth - this.contentStart - this.margin },
   lineHeight: 7,
   fonts: {
     title: 24,
@@ -105,6 +102,17 @@ export const generatePDF = async (
     format: settings.pageSize
   })
   
+  // DYNAMIC CONFIGURATION BASED ON ACTUAL PAGE SIZE
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  
+  const config = {
+      ...BASE_CONFIG,
+      pageWidth,
+      pageHeight,
+      contentWidth: pageWidth - BASE_CONFIG.contentStart - BASE_CONFIG.margin
+  }
+  
   onProgress?.('Preparing PDF...')
 
   const articleCover = content.coverImage // simplified
@@ -145,10 +153,10 @@ export const generatePDF = async (
   onProgress?.('Generating Title Page...')
   // Background Color for Title Page
   doc.setFillColor(colors.sidebar)
-  doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+  doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
   
-  const TITLE_START_X = PDF_CONFIG.margin + 10
-  let currentY = PDF_CONFIG.margin + 30
+  const TITLE_START_X = config.margin + 10
+  let currentY = config.margin + 30
   
   const titlePageTextMain = '#FFFFFF'
   const titlePageTextSecondary = '#E5E7EB' 
@@ -167,7 +175,7 @@ export const generatePDF = async (
   doc.setTextColor(titlePageTextMain)
   
   const TITLE_X_OFFSET = 12
-  const MAX_TITLE_WIDTH = PDF_CONFIG.pageWidth - TITLE_START_X - 10 - TITLE_X_OFFSET
+  const MAX_TITLE_WIDTH = config.pageWidth - TITLE_START_X - 10 - TITLE_X_OFFSET
   const titleLines = doc.splitTextToSize(metadata.title.toUpperCase(), MAX_TITLE_WIDTH)
   const titleBlockHeight = titleLines.length * (titleFontSize * 0.3527 * 1.15)
   
@@ -183,7 +191,7 @@ export const generatePDF = async (
      try {
         const imgProps = doc.getImageProperties(articleCover)
         const imgRatio = imgProps.height / imgProps.width
-        const imgWidth = PDF_CONFIG.pageWidth 
+        const imgWidth = config.pageWidth 
         const imgHeight = imgWidth * imgRatio
         
         doc.addImage(articleCover, 'JPEG', 0, currentY, imgWidth, imgHeight)
@@ -195,7 +203,7 @@ export const generatePDF = async (
   }
   
   // 4. Metadata
-  let metaY = PDF_CONFIG.pageHeight - 60
+  let metaY = config.pageHeight - 60
   if (currentY > metaY) metaY = currentY + 10
   
   doc.setFont(fonts.ui, 'bold')
@@ -226,8 +234,8 @@ export const generatePDF = async (
   doc.setFont(fonts.ui, 'bold')
   const fWidth = doc.getTextWidth(fullBadgeText) + 12
   const fHeight = 8
-  const fX = PDF_CONFIG.pageWidth - fWidth - 10
-  const fY = PDF_CONFIG.pageHeight - fHeight - 10
+  const fX = config.pageWidth - fWidth - 10
+  const fY = config.pageHeight - fHeight - 10
   
   doc.setDrawColor(titlePageTextSecondary)
   doc.setLineWidth(0.3)
@@ -246,11 +254,11 @@ export const generatePDF = async (
   onProgress?.('Formatting Content...')
   doc.addPage()
   doc.setFillColor(colors.bg)
-  doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+  doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
   
   let currentPageIndex = 2
   
-  let contentY = PDF_CONFIG.margin
+  let contentY = config.margin
   
   const tocEntries: { text: string, page: number, level: number }[] = []
   
@@ -267,14 +275,14 @@ export const generatePDF = async (
   ): number => {
       // Helper to add new content page with BG
       const checkAndAddPage = (currentY: number) => {
-          if (currentY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) { 
+          if (currentY > config.pageHeight - config.margin - 10) { 
               targetDoc.addPage()
               currentPageIndex++
               if (targetDoc === doc) {
                   targetDoc.setFillColor(colors.bg)
-                  targetDoc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+                  targetDoc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
               }
-              return PDF_CONFIG.margin
+              return config.margin
           }
           return currentY
       }
@@ -291,14 +299,14 @@ export const generatePDF = async (
           for (const line of lines) {
               const nextY = curY + lh
               // Proper Re-implementation of Add Page Logic inline
-              if (curY + lh > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
+              if (curY + lh > config.pageHeight - config.margin - 10) {
                   targetDoc.addPage()
                   currentPageIndex++
                   if (targetDoc === doc) {
                       targetDoc.setFillColor(colors.bg)
-                      targetDoc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+                      targetDoc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
                   }
-                  curY = PDF_CONFIG.margin
+                  curY = config.margin
               }
               
               targetDoc.text(line, startX, curY)
@@ -328,14 +336,14 @@ export const generatePDF = async (
             if (cursorX + wordWidth > startX + maxWidth) {
                cursorX = startX
                cursorY += lineHeight
-               if (cursorY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
+               if (cursorY > config.pageHeight - config.margin - 10) {
                    targetDoc.addPage()
                    currentPageIndex++
                    if (targetDoc === doc) {
                        targetDoc.setFillColor(colors.bg)
-                       targetDoc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+                       targetDoc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
                    }
-                   cursorY = PDF_CONFIG.margin
+                   cursorY = config.margin
                }
             }
             if (seg.link) targetDoc.textWithLink(word, cursorX, cursorY, { url: seg.link })
@@ -354,42 +362,42 @@ export const generatePDF = async (
         onProgress?.(`Processing Block ${blockIndex}/${content.content.length}...`)
      }
 
-     if (contentY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 10) {
+     if (contentY > config.pageHeight - config.margin - 10) {
         doc.addPage()
         currentPageIndex++
         doc.setFillColor(colors.bg)
-        doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
-        contentY = PDF_CONFIG.margin
+        doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+        contentY = config.margin
      }
      
-     const X_POS = PDF_CONFIG.contentStart
-     const MAX_W = PDF_CONFIG.contentWidth
+     const X_POS = config.contentStart
+     const MAX_W = config.contentWidth
      
      switch (block.type) {
         case 'heading1':
-           doc.setFontSize(PDF_CONFIG.fonts.heading1)
+           doc.setFontSize(config.fonts.heading1)
            doc.setFont(fonts.heading, 'bold') 
            doc.setTextColor(colors.text)
            tocEntries.push({ 
               text: block.text || '', page: currentPageIndex, level: 1 
            })
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, PDF_CONFIG.fonts.heading1, colors.text)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, config.fonts.heading1, colors.text)
            contentY += 3
            break
            
         case 'heading2':
-           doc.setFontSize(PDF_CONFIG.fonts.heading2)
+           doc.setFontSize(config.fonts.heading2)
            doc.setFont(fonts.heading, 'bold')
            tocEntries.push({ 
               text: block.text || '', page: currentPageIndex, level: 2 
            })
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, PDF_CONFIG.fonts.heading2, colors.text)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, config.fonts.heading2, colors.text)
            contentY += 2
            break
            
         case 'paragraph':
-           doc.setFontSize(PDF_CONFIG.fonts.body)
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, PDF_CONFIG.fonts.body, colors.text)
+           doc.setFontSize(config.fonts.body)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS, contentY, MAX_W, config.fonts.body, colors.text)
            contentY += 4
            break
            
@@ -398,23 +406,23 @@ export const generatePDF = async (
            doc.setLineWidth(1)
            
            const tempDoc = new jsPDF({ unit: 'mm', format: settings.pageSize }) as any
-           const tempY = renderFormattedBlock(tempDoc, block.segments, block.text, X_POS + 5, contentY, MAX_W - 10, PDF_CONFIG.fonts.body, colors.secondary)
+           const tempY = renderFormattedBlock(tempDoc, block.segments, block.text, X_POS + 5, contentY, MAX_W - 10, config.fonts.body, colors.secondary)
            const h = tempY - contentY
            
            doc.line(X_POS, contentY - 2, X_POS, contentY + h)
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 5, contentY, MAX_W - 10, PDF_CONFIG.fonts.body, colors.secondary)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 5, contentY, MAX_W - 10, config.fonts.body, colors.secondary)
            contentY += 6
            break
            
         case 'list-item-unordered':
            doc.text('•', X_POS, contentY)
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 6, contentY, MAX_W - 6, PDF_CONFIG.fonts.body, colors.text)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 6, contentY, MAX_W - 6, config.fonts.body, colors.text)
            contentY += 2
            break
         
         case 'list-item-ordered':
            doc.text('-', X_POS, contentY)
-           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 6, contentY, MAX_W - 6, PDF_CONFIG.fonts.body, colors.text)
+           contentY = renderFormattedBlock(doc, block.segments, block.text, X_POS + 6, contentY, MAX_W - 6, config.fonts.body, colors.text)
            contentY += 2
            break
            
@@ -422,12 +430,12 @@ export const generatePDF = async (
            if (block.src) {
                try {
                   const maxH = 120
-                  if (contentY + 50 > PDF_CONFIG.pageHeight - PDF_CONFIG.margin) {
+                  if (contentY + 50 > config.pageHeight - config.margin) {
                       doc.addPage()
                       currentPageIndex++
                       doc.setFillColor(colors.bg)
-                      doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
-                      contentY = PDF_CONFIG.margin
+                      doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+                      contentY = config.margin
                   }
                   
                   const props = doc.getImageProperties(block.src)
@@ -446,10 +454,9 @@ export const generatePDF = async (
 
   // --- 3. TOC Page Injection and Post-Processing ---
   onProgress?.('Generating Table of Contents...')
-  const ITEMS_PER_PAGE_TOC = 20 // Approx safety limit
   const ENTRY_HEIGHT = 12
   const TOC_TITLE_HEIGHT = 40
-  const AVAILABLE_HEIGHT = PDF_CONFIG.pageHeight - 2 * PDF_CONFIG.margin
+  const AVAILABLE_HEIGHT = config.pageHeight - 2 * config.margin
   
   const totalTocHeight = TOC_TITLE_HEIGHT + (tocEntries.length * ENTRY_HEIGHT)
   const tocPagesCount = Math.ceil(totalTocHeight / AVAILABLE_HEIGHT) || 1
@@ -459,7 +466,7 @@ export const generatePDF = async (
       doc.insertPage(2 + i)
       doc.setPage(2 + i)
       doc.setFillColor(colors.bg)
-      doc.rect(0, 0, PDF_CONFIG.pageWidth, PDF_CONFIG.pageHeight, 'F')
+      doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
   }
 
   // --- 4. Content Page Number Fix via Post-Loop ---
@@ -472,16 +479,16 @@ export const generatePDF = async (
       doc.setPage(p)
       // Draw Sidebar
       doc.setFillColor(colors.sidebar)
-      doc.rect(0, 0, PDF_CONFIG.sidebarWidth, PDF_CONFIG.pageHeight, 'F')
+      doc.rect(0, 0, config.sidebarWidth, config.pageHeight, 'F')
       
       // Footer Line
       doc.setDrawColor(colors.secondary)
       doc.setLineWidth(0.5)
       doc.line(
-         PDF_CONFIG.contentStart, 
-         PDF_CONFIG.pageHeight - 20, 
-         PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
-         PDF_CONFIG.pageHeight - 20
+         config.contentStart, 
+         config.pageHeight - 20, 
+         config.pageWidth - config.margin, 
+         config.pageHeight - 20
       )
       
       // Footer Title
@@ -492,8 +499,8 @@ export const generatePDF = async (
       const footerTitle = metadata.title.length > 50 ? metadata.title.substring(0, 50) + '...' : metadata.title
       doc.text(
          footerTitle, 
-         PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
-         PDF_CONFIG.pageHeight - 15, 
+         config.pageWidth - config.margin, 
+         config.pageHeight - 15, 
          { align: 'right' }
       )
       
@@ -501,19 +508,19 @@ export const generatePDF = async (
       doc.setFont(fonts.ui, 'bold')
       doc.setFontSize(12)
       doc.setTextColor(isDark ? '#FFFFFF' : '#FFFFFF') 
-      doc.text(`${p}`, PDF_CONFIG.sidebarWidth / 2, PDF_CONFIG.pageHeight - 15, { align: 'center' })
+      doc.text(`${p}`, config.sidebarWidth / 2, config.pageHeight - 15, { align: 'center' })
   }
   
   // --- 5. Render TOC Content ---
   let currentTocPage = 0
-  let tocY = PDF_CONFIG.margin + 10
+  let tocY = config.margin + 10
   
   doc.setPage(2)
   // TOC Title
   doc.setFont(fonts.title, 'normal')
   doc.setFontSize(32)
   doc.setTextColor(colors.text)
-  doc.text('TABLE OF CONTENTS', PDF_CONFIG.contentStart, tocY)
+  doc.text('TABLE OF CONTENTS', config.contentStart, tocY)
   tocY += 25
   
   doc.setFont(fonts.body, 'normal')
@@ -521,13 +528,13 @@ export const generatePDF = async (
   
   tocEntries.forEach((entry, i) => {
       // Check for page break within TOC pages
-      if (tocY > PDF_CONFIG.pageHeight - PDF_CONFIG.margin - 20) {
+      if (tocY > config.pageHeight - config.margin - 20) {
           currentTocPage++
           // Switch to naturally next page (which we already inserted)
           const nextPageIndex = 2 + currentTocPage
           if (nextPageIndex <= 1 + tocPagesCount) {
              doc.setPage(nextPageIndex)
-             tocY = PDF_CONFIG.margin + 20
+             tocY = config.margin + 20
           }
       }
       
@@ -549,9 +556,9 @@ export const generatePDF = async (
       
       doc.setTextColor(colors.text)
       doc.setFont(fonts.body, 'normal')
-      doc.text(prefix, PDF_CONFIG.contentStart, ROW_Y)
+      doc.text(prefix, config.contentStart, ROW_Y)
       
-      const titleX = PDF_CONFIG.contentStart + 15
+      const titleX = config.contentStart + 15
       
       doc.setTextColor(colors.accent)
       doc.setFont(fonts.body, 'bold')
@@ -566,14 +573,46 @@ export const generatePDF = async (
       doc.setFont(fonts.body, 'normal')
       doc.text(
          `${targetPageNum}`, 
-         PDF_CONFIG.pageWidth - PDF_CONFIG.margin, 
+         config.pageWidth - config.margin, 
          ROW_Y, 
          { align: 'right' }
       )
       
-      doc.link(PDF_CONFIG.contentStart, ROW_Y - 5, 140, 10, { pageNumber: targetPageNum })
+      doc.link(config.contentStart, ROW_Y - 5, 140, 10, { pageNumber: targetPageNum })
       tocY += 12
   })
+
+  // --- 6. End Page / Notes Section ---
+  // Suggestion from user: "what do you suggest i add at the end of the document?"
+  // Implementation: A clean "Notes" page with ruled lines.
+  onProgress?.('Generating Notes Page...')
+  doc.addPage()
+  doc.setFillColor(colors.bg)
+  doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+  
+  // Header
+  doc.setFont(fonts.title, 'bold')
+  doc.setFontSize(24)
+  doc.setTextColor(colors.text)
+  doc.text('NOTES', config.margin, config.margin + 10)
+  
+  // Rule Lines
+  doc.setDrawColor(colors.border)
+  doc.setLineWidth(0.2)
+  
+  const startNotesY = config.margin + 30
+  const endNotesY = config.pageHeight - config.margin
+  const lineSpacing = 10
+  
+  for (let y = startNotesY; y < endNotesY; y += lineSpacing) {
+      doc.line(config.margin, y, config.pageWidth - config.margin, y)
+  }
+  
+  // Footer Badge for End Page
+  doc.setFont(fonts.ui, 'italic')
+  doc.setFontSize(10)
+  doc.setTextColor(colors.secondary)
+  doc.text('Generated by X Articles Exporter', config.pageWidth / 2, config.pageHeight - 15, { align: 'center' })
   
   // Save
   onProgress?.('Saving PDF...')

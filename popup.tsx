@@ -166,7 +166,7 @@ function IndexPopup() {
         onClick={handleSave}
         className={`save-button ${saved ? 'saved' : ''}`}
       >
-        {saved ? '✓ Saved!' : 'Save Settings'}
+        {saved ? 'Saved!' : 'Save Settings'}
       </button>
 
       {/* Usage Info */}
