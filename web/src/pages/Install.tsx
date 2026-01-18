@@ -91,11 +91,11 @@ export function Install() {
                   <div className="code-block">
                     <div className="code-header">
                       <span>Terminal</span>
-                      <button onClick={() => copyToClipboard('git clone https://github.com/korecodes/x-articles-exporter.git', 'step1')} className="copy-btn">
+                      <button onClick={() => copyToClipboard('git clone https://github.com/koredeycode/x-articles-exporter.git', 'step1')} className="copy-btn">
                         {copiedStep === 'step1' ? 'Copied!' : 'Copy'}
                       </button>
                     </div>
-                    <pre><span className="token-cmd">git</span> <span className="token-arg">clone</span> https://github.com/korecodes/x-articles-exporter.git</pre>
+                    <pre><span className="token-cmd">git</span> <span className="token-arg">clone</span> https://github.com/koredeycode/x-articles-exporter.git</pre>
                   </div>
                 </div>
               </div>

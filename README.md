@@ -48,7 +48,7 @@ This project is built with [Plasmo](https://docs.plasmo.com/), a modern framewor
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/korecodes/x-articles-exporter.git
+   git clone https://github.com/koredeycode/x-articles-exporter.git
    ```
 2. Install dependencies:
    ```bash
@@ -95,4 +95,4 @@ The generated PDF includes:
 
 ## 📄 License
 
-MIT © [Yusuf Akorede](https://github.com/korecodes)
+MIT © [Yusuf Akorede](https://github.com/koredeycode)
