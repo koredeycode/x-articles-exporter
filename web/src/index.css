@@ -202,9 +202,25 @@ code {
   border-top: 1px solid var(--border);
 }
 
+.github-star-wrapper {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  z-index: 50; /* Ensure it stays on top */
+}
+
 @media (max-width: 768px) {
   h1 { font-size: 2.5rem; }
   .steps { padding: 2rem; }
+  
+  .github-star-wrapper {
+    position: relative;
+    top: auto;
+    right: auto;
+    padding: 1rem;
+    display: flex;
+    justify-content: flex-end;
+  }
   
   .hero-buttons {
     flex-direction: column;

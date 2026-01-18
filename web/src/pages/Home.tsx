@@ -13,7 +13,7 @@ export function Home() {
 
   return (
     <>
-      <div style={{ position: 'absolute', top: '2rem', right: '2rem' }}>
+      <div className="github-star-wrapper">
         <a 
           href="https://github.com/koredeycode/x-articles-exporter" 
           target="_blank" 
