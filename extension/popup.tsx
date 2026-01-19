@@ -2,24 +2,34 @@ import { useEffect, useRef, useState } from "react"
 import icon from "./assets/icon.png"
 import "./popup.css"
 
+// Interface for the user-configurable settings
 interface Settings {
+  /** Color theme: 'light' or 'dark' */
   theme: 'light' | 'dark'
+  /** Paper size for the PDF: 'a4' or 'letter' */
   pageSize: 'a4' | 'letter'
+  /** Font style for the PDF text */
   font: 'serif' | 'sans'
 }
 
+/** Default settings loaded on first run */
 const defaultSettings: Settings = {
   theme: 'light',
   pageSize: 'a4',
   font: 'sans'
 }
 
+// Props for the generic CustomDropdown component
 interface CustomDropdownProps {
   value: string
   options: { label: string; value: string }[]
   onChange: (value: string) => void
 }
 
+/**
+ * A custom styled dropdown component to replace the native <select>.
+ * Improves the UI consistency with the extension's theme.
+ */
 const CustomDropdown = ({ value, options, onChange }: CustomDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -74,6 +84,10 @@ const CustomDropdown = ({ value, options, onChange }: CustomDropdownProps) => {
   )
 }
 
+/**
+ * The main popup component for the extension.
+ * Allows users to configure global settings for the PDF export.
+ */
 function IndexPopup() {
   const [settings, setSettings] = useState<Settings>(defaultSettings)
   const [saved, setSaved] = useState(false)

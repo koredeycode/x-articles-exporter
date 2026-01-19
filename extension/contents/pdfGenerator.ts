@@ -14,12 +14,21 @@ declare module 'jspdf' {
 }
 
 // Settings interface matching popup
+/**
+ * User-configurable settings for PDF generation.
+ */
 export interface Settings {
+  /** Color theme: 'light' or 'dark'. */
   theme: 'light' | 'dark'
+  /** Page size: 'a4' or 'letter'. */
   pageSize: 'a4' | 'letter'
+  /** Font style: 'serif' or 'sans'. */
   font: 'serif' | 'sans'
 }
 
+/**
+ * Metadata about the article being exported.
+ */
 interface ArticleMetadata {
   title: string
   author: string
@@ -28,6 +37,9 @@ interface ArticleMetadata {
   url: string
 }
 
+/**
+ * A segment of text with style attributes.
+ */
 export interface TextSegment {
   text: string
   isBold?: boolean
@@ -35,6 +47,9 @@ export interface TextSegment {
   link?: string
 }
 
+/**
+ * A block of content containing text or media.
+ */
 export interface ContentBlock {
   type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
   text?: string
@@ -47,10 +62,16 @@ export interface ContentBlock {
 }
 
 // PDF Constants (Default / Base)
+/**
+ * Base configuration for PDF layout and styling.
+ * These values can be dynamic adjusted based on page size.
+ */
 const BASE_CONFIG = {
   margin: 20,
-  sidebarWidth: 35, // Width of the colored sidebar
-  contentStart: 50, // Start X for content (35 sidebar + 15 padding)
+  /** Width of the colored sidebar on the left. */
+  sidebarWidth: 35, 
+  /** X-coordinate where content starts (sidebar + padding). */
+  contentStart: 50, 
   lineHeight: 7,
   fonts: {
     title: 24,
@@ -82,18 +103,39 @@ const BASE_CONFIG = {
 }
 
 // Sanitize text for PDF
+/**
+ * Sanitizes input text using DOMPurify to prevent XSS or unexpected characters.
+ * @param {string} text - Raw text input.
+ * @returns {string} Sanitized text string.
+ */
 function sanitizeText(text: string): string {
   const cleaned = DOMPurify.sanitize(text, { ALLOWED_TAGS: [] })
   return cleaned.trim()
 }
 
 // Split text
+/**
+ * Splits text into lines that fit within a specified width.
+ * @param {jsPDF} doc - jsPDF instance.
+ * @param {string} text - Text to split.
+ * @param {number} maxWidth - Maximum allowed width.
+ * @param {number} fontSize - Font size for calculation.
+ * @returns {string[]} Array of strings, each representing a line.
+ */
 function splitTextToWidth(doc: jsPDF, text: string, maxWidth: number, fontSize: number): string[] {
   doc.setFontSize(fontSize)
   return doc.splitTextToSize(text, maxWidth)
 }
 
 // Generate PDF
+/**
+ * Main function to generate the PDF document.
+ * Handles layout, pagination, styling, and content rendering.
+ * @param {ArticleMetadata} metadata - Article metadata (title, author, etc.).
+ * @param {object} content - Extracted article content and cover image.
+ * @param {Settings} settings - User preferences for theme/font/size.
+ * @param {function} onProgress - Callback for reporting generation status.
+ */
 export const generatePDF = async (
   metadata: ArticleMetadata,
   content: { content: ContentBlock[], coverImage: string | null },

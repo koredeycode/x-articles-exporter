@@ -3,12 +3,19 @@
 
 import type { PlasmoCSConfig } from "plasmo"
 
+/**
+ * Plasmo Content Script Configuration.
+ * Specimens the matching patterns (X.com and Twitter.com) and run time (when document is idle).
+ */
 export const config: PlasmoCSConfig = {
   matches: ["https://x.com/*", "https://twitter.com/*"],
   run_at: "document_idle"
 }
 
-// DOM Selectors
+/**
+ * DOM Selectors used to identify key elements on the X Article page.
+ * These selectors target internal test-ids used by React on X.com.
+ */
 const SELECTORS = {
   articleView: '[data-testid="twitterArticleReadView"]',
   articleTitle: '[data-testid="twitter-article-title"]',
@@ -20,28 +27,51 @@ const SELECTORS = {
   tweet: '[data-testid="tweet"]'
 }
 
+/** Unique ID for the injected Export button. */
 const EXPORT_BUTTON_ID = 'x-articles-exporter-btn'
 
 // Interfaces
+
+/**
+ * Represents a segment of text with specific formatting.
+ */
 export interface TextSegment {
+  /** The actual text content. */
   text: string
+  /** Whether the text is bold. */
   isBold?: boolean
+  /** Whether the text is italicized. */
   isItalic?: boolean
+  /** URL if the segment is a link. */
   link?: string
 }
 
+/**
+ * Represents a block of content extracted from the article.
+ * Can be a heading, paragraph, image, video, or embedded tweet.
+ */
 export interface ContentBlock {
   type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
+  /** Combined text content for text-based blocks. */
   text?: string
+  /** Detailed segments for rich text formatting. */
   segments?: TextSegment[]
+  /** Source URL for images or posters. */
   src?: string
-  link?: string // For video/tweet links
-  author?: string // For embed-tweet
-  handle?: string // For embed-tweet
-  date?: string // For embed-tweet
+  /** Link URL for video or tweet embeds. */
+  link?: string 
+  /** Author name for embedded tweets. */
+  author?: string 
+  /** Author handle for embedded tweets. */
+  handle?: string 
+  /** Publish date for embedded tweets. */
+  date?: string 
 }
 
 // Icons
+/**
+ * SVG icons used in the export button for different states.
+ */
 const ICONS = {
   export: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
   loading: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
@@ -50,6 +80,10 @@ const ICONS = {
 }
 
 // Button Styles
+/**
+ * CSS Styles for the injected export button.
+ * Includes positioning, colors, and hover states.
+ */
 const BUTTON_STYLES = `
   #${EXPORT_BUTTON_ID} {
     position: fixed;
@@ -85,11 +119,20 @@ const BUTTON_STYLES = `
 `
 
 // Utils
+
+/**
+ * Checks if the current page is an X Article or Status page.
+ * @returns {boolean} True if the URL matches and the article view element exists.
+ */
 function isArticlePage(): boolean {
   const urlPattern = /\/[^/]+\/(?:article|status)\/\d+/
   return urlPattern.test(window.location.pathname) && !!document.querySelector(SELECTORS.articleView)
 }
 
+/**
+ * Extracts metadata from the current article page.
+ * @returns An object containing the title, author, handle, date, and URL.
+ */
 function extractMetadata() {
   const title = document.querySelector(SELECTORS.articleTitle)?.textContent?.trim() || 'Untitled Article'
   const userNameEl = document.querySelector(SELECTORS.userName)
@@ -108,6 +151,11 @@ function extractMetadata() {
   return { title, author, handle, date, url: window.location.href }
 }
 
+/**
+ * Creates a placeholder image as a data URL when an image fails to load.
+ * @param {string} text - Text to display on the placeholder.
+ * @returns {string} Base64 data URL of the generated placeholder image.
+ */
 function createPlaceholderImage(text: string = 'Image Failed'): string {
   try {
     const canvas = document.createElement('canvas')
@@ -148,6 +196,13 @@ function createPlaceholderImage(text: string = 'Image Failed'): string {
   }
 }
 
+/**
+ * Fetches an image from a URL and converts it to a Base64 string.
+ * Retries up to `retries` times on failure.
+ * @param {string} url - The URL of the image.
+ * @param {number} retries - Number of retry attempts.
+ * @returns {Promise<string | null>} Base64 string or null/placeholder on failure.
+ */
 async function convertImageToBase64(url: string, retries = 3): Promise<string | null> {
   let attempt = 0
   while (attempt < retries) {
@@ -176,7 +231,12 @@ async function convertImageToBase64(url: string, retries = 3): Promise<string | 
   return null
 }
 
-// Recursive Rich Text Extraction
+/**
+ * Recursively extracts rich text from a DOM node.
+ * Preserves bold, italic, and link formatting.
+ * @param {Node} node - The DOM node to traverse.
+ * @returns {TextSegment[]} An array of text segments with style information.
+ */
 function extractRichText(node: Node): TextSegment[] {
   const segments: TextSegment[] = []
   
@@ -217,7 +277,11 @@ function extractRichText(node: Node): TextSegment[] {
   return merged
 }
 
-// Main Content Extraction
+/**
+ * Main function to extract all article content (text, images, videos, tweets).
+ * @param {function} onProgress - Callback to report status updates.
+ * @returns {Promise<{ content: ContentBlock[], coverImage: string | null }>} extracted content and cover image.
+ */
 async function extractArticleContent(onProgress?: (status: string) => void): Promise<{ content: ContentBlock[], coverImage: string | null }> {
   const content: ContentBlock[] = []
   let coverImage: string | null = null
@@ -380,6 +444,12 @@ async function extractArticleContent(onProgress?: (status: string) => void): Pro
 }
 
 // Handlers
+
+/**
+ * Handles the export button click event.
+ * Dynamically imports the PDF generator to save resources.
+ * Orchestrates the data extraction and PDF generation process.
+ */
 async function handleExportClick() {
   const button = document.getElementById(EXPORT_BUTTON_ID) as HTMLButtonElement
   if (!button || button.disabled) return
@@ -420,6 +490,9 @@ async function handleExportClick() {
   }
 }
 
+/**
+ * Injects the styled export button into the DOM.
+ */
 function injectExportButton() {
   if (document.getElementById(EXPORT_BUTTON_ID)) return
   
@@ -435,15 +508,27 @@ function injectExportButton() {
   document.body.appendChild(button)
 }
 
+/**
+ * Removes the export button from the DOM.
+ * Used when navigating away from an article page.
+ */
 function removeExportButton() {
   document.getElementById(EXPORT_BUTTON_ID)?.remove()
 }
 
+/**
+ * Checks the current page state and injects or removes the button accordingly.
+ */
 function checkAndInject() {
   isArticlePage() ? injectExportButton() : removeExportButton()
 }
 
 // Init
+
+/**
+ * Sets up a MutationObserver to detect navigation changes (SPA behavior).
+ * Re-checks injection logic whenever the body content changes.
+ */
 function setupObserver() {
   checkAndInject()
   let lastUrl = window.location.href
