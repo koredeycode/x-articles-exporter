@@ -24,7 +24,8 @@ const SELECTORS = {
   articleImage: '[data-testid="tweetPhoto"] img',
   tweetTime: 'time[datetime]',
   videoPlayer: '[data-testid="videoPlayer"]',
-  tweet: '[data-testid="tweet"]'
+  tweet: '[data-testid="tweet"]',
+  codeBlock: '[data-testid="markdown-code-block"]'
 }
 
 /** Unique ID for the injected Export button. */
@@ -51,7 +52,7 @@ export interface TextSegment {
  * Can be a heading, paragraph, image, video, or embedded tweet.
  */
 export interface ContentBlock {
-  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
+  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet' | 'code-block'
   /** Combined text content for text-based blocks. */
   text?: string
   /** Detailed segments for rich text formatting. */
@@ -65,7 +66,9 @@ export interface ContentBlock {
   /** Author handle for embedded tweets. */
   handle?: string 
   /** Publish date for embedded tweets. */
-  date?: string 
+  date?: string
+  /** Language for code blocks. */
+  language?: string
 }
 
 // Icons
@@ -374,6 +377,7 @@ async function extractArticleContent(onProgress?: (status: string) => void): Pro
     }
   }
 
+
   // Extract Embedded Tweets
   const tweets = Array.from(richTextView.querySelectorAll(SELECTORS.tweet))
   for (const tweet of tweets) {
@@ -396,6 +400,27 @@ async function extractArticleContent(onProgress?: (status: string) => void): Pro
            node: tweet
         })
      }
+  }
+
+  // Extract Code Blocks
+  const codeBlocks = Array.from(richTextView.querySelectorAll(SELECTORS.codeBlock))
+  for (const block of codeBlocks) {
+      const codeElement = block.querySelector('code')
+      if (codeElement) {
+          const text = codeElement.textContent || ''
+          const className = codeElement.className || ''
+          const languageMatch = className.match(/language-(\w+)/)
+          const language = languageMatch ? languageMatch[1] : undefined
+
+          items.push({
+              block: {
+                  type: 'code-block',
+                  text,
+                  language
+              },
+              node: block
+          })
+      }
   }
 
   // Extract Body Images

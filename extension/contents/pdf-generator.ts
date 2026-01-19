@@ -51,7 +51,7 @@ export interface TextSegment {
  * A block of content containing text or media.
  */
 export interface ContentBlock {
-  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet'
+  type: 'heading1' | 'heading2' | 'paragraph' | 'blockquote' | 'list-item-unordered' | 'list-item-ordered' | 'image' | 'video' | 'embed-tweet' | 'code-block'
   text?: string
   segments?: TextSegment[]
   src?: string
@@ -59,6 +59,7 @@ export interface ContentBlock {
   author?: string
   handle?: string
   date?: string
+  language?: string
 }
 
 // PDF Constants (Default / Base)
@@ -287,11 +288,10 @@ export const generatePDF = async (
   const fX = config.pageWidth - fWidth - 10
   const fY = config.pageHeight - fHeight - 10
   
-  doc.setDrawColor(titlePageTextSecondary)
-  doc.setLineWidth(0.3)
-  doc.rect(fX, fY, fWidth, fHeight) 
+  doc.setFillColor(titlePageTextSecondary)
+  doc.roundedRect(fX, fY, fWidth, fHeight, 1, 1, 'F') 
   
-  doc.setTextColor(titlePageTextSecondary)
+  doc.setTextColor(colors.sidebar)
   doc.text(badgeTextMain, fX + 6, fY + 5.5)
   
   const mainTextWidth = doc.getTextWidth(badgeTextMain)
@@ -626,6 +626,53 @@ export const generatePDF = async (
            if (block.link) {
                doc.link(X_POS, startY, CARD_W, totalCardHeight, { url: block.link })
            }
+           break
+
+         case 'code-block':
+           // Code Block Config
+           const CODE_PADDING = 10
+           const CODE_BG_COLOR = isDark ? '#1F2937' : '#F7F9F9' // Dark gray or Light gray
+           const CODE_TEXT_COLOR = isDark ? '#E5E7EB' : '#374151'
+           
+           doc.setFont('courier', 'normal')
+           doc.setFontSize(10)
+           
+           const codeLines = doc.splitTextToSize(block.text || '', MAX_W - (CODE_PADDING * 2))
+           const codeHeight = (codeLines.length * 4) + (CODE_PADDING * 2) // Approx height per line
+           
+           // Check page break
+           if (contentY + codeHeight > config.pageHeight - config.margin) {
+              doc.addPage()
+              currentPageIndex++
+              doc.setFillColor(colors.bg)
+              doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
+              contentY = config.margin
+           }
+           
+           // Background
+           doc.setFillColor(CODE_BG_COLOR)
+           doc.rect(X_POS, contentY, MAX_W, codeHeight, 'F')
+           
+           // Language Label
+           if (block.language) {
+               doc.setFont(fonts.ui, 'bold')
+               doc.setFontSize(8)
+               doc.setTextColor(colors.secondary)
+               doc.text(block.language.toUpperCase(), X_POS + MAX_W - 10, contentY + 8, { align: 'right' })
+           }
+           
+           // Code Text
+           doc.setFont('courier', 'normal')
+           doc.setFontSize(10)
+           doc.setTextColor(CODE_TEXT_COLOR)
+           
+           let codeY = contentY + CODE_PADDING + 2
+           for (const line of codeLines) {
+               doc.text(line, X_POS + CODE_PADDING, codeY)
+               codeY += 4
+           }
+           
+           contentY += codeHeight + 6
            break
      }
   }

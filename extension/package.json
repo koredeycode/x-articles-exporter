@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
-    "package": "plasmo package"
+    "package": "plasmo package",
+    "deploy-web": "plasmo package && cp build/chrome-mv3-prod.zip ../web/public/x-article-exporter.zip"
   },
   "dependencies": {
     "dompurify": "^3.3.1",
