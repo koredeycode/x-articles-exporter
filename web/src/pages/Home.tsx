@@ -7,7 +7,7 @@ export function Home() {
     // Let the download happen naturally via the anchor tag default behavior
     // Then redirect after a short delay
     setTimeout(() => {
-      navigate('/install')
+      navigate('/docs')
     }, 1000)
   }
 
@@ -47,7 +47,7 @@ export function Home() {
               </svg>
               Download Extension
             </a>
-            <Link to="/install" className="btn btn-outline">
+            <Link to="/docs" className="btn btn-outline">
               How to Install
             </Link>
           </div>

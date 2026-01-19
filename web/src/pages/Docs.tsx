@@ -1,15 +1,67 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 
-export function Install() {
-  const [activeTab, setActiveTab] = useState<'install' | 'build'>('install')
+type TabType = 'install' | 'build' | 'usage'
+
+const TABS: TabType[] = ['install', 'build', 'usage']
+
+export function Docs() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [copiedStep, setCopiedStep] = useState<string | null>(null)
+
+  const activeTab = (searchParams.get('tab') as TabType) || 'install'
+
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams({ tab })
+  }
 
   const copyToClipboard = (text: string, stepId: string) => {
     navigator.clipboard.writeText(text)
     setCopiedStep(stepId)
     setTimeout(() => setCopiedStep(null), 2000)
   }
+
+  const currentIndex = TABS.indexOf(activeTab)
+  const prevTab = currentIndex > 0 ? TABS[currentIndex - 1] : null
+  const nextTab = currentIndex < TABS.length - 1 ? TABS[currentIndex + 1] : null
+
+  const renderNavButtons = () => (
+    <div className="doc-nav-buttons">
+      {prevTab ? (
+        <button 
+          onClick={() => setActiveTab(prevTab)}
+          className="nav-card-btn"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <div>
+            <div className="nav-card-btn-label">Previous</div>
+            <div className="nav-card-btn-title">{prevTab === 'install' ? 'Installation' : prevTab === 'build' ? 'Build from Source' : 'How to Use'}</div>
+          </div>
+        </button>
+      ) : <div />}
+      
+      {nextTab ? (
+        <button 
+          onClick={() => setActiveTab(nextTab)}
+          className="nav-card-btn right"
+        >
+          <div>
+            <div className="nav-card-btn-label">Next</div>
+            <div className="nav-card-btn-title">{nextTab === 'install' ? 'Installation' : nextTab === 'build' ? 'Build from Source' : 'How to Use'}</div>
+          </div>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      ) : <div />}
+    </div>
+  )
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [activeTab])
 
   return (
     <div className="doc-layout">
@@ -35,11 +87,59 @@ export function Install() {
           >
             Build from Source
           </button>
+          <button 
+            className={`nav-btn ${activeTab === 'usage' ? 'active' : ''}`}
+            onClick={() => setActiveTab('usage')}
+          >
+            How to Use
+          </button>
         </nav>
       </aside>
 
       <main className="doc-content">
-        {activeTab === 'install' ? (
+        {activeTab === 'usage' && (
+           <section className="fade-in">
+             <h1>How to Use</h1>
+             <p className="lead">Learn how to export your favorite X (Twitter) articles to PDF.</p>
+             
+             <div className="step-group">
+               <div className="step">
+                 <div className="step-number">01</div> 
+                 <div className="step-content">
+                   <h3>Open an Article</h3>
+                   <p>Navigate to any article on <a href="https://x.com" target="_blank" rel="noopener noreferrer">x.com</a> (Twitter). Ensure you are viewing the full article content.</p>
+                 </div>
+               </div>
+
+               <div className="step">
+                 <div className="step-number">02</div>
+                 <div className="step-content">
+                   <h3>Open Extension</h3>
+                   <p>Click the <strong>X Articles Exporter</strong> icon in your browser toolbar to open the popup for settings.</p>
+                 </div>
+               </div>
+
+               <div className="step">
+                 <div className="step-number">03</div>
+                 <div className="step-content">
+                   <h3>Customize Settings</h3>
+                   <p>Select your preferred <strong>Theme</strong> (Light/Dark) and <strong>Page Size</strong> (A4/Letter) from the dropdown menus.</p>
+                 </div>
+               </div>
+
+               <div className="step">
+                 <div className="step-number">04</div>
+                 <div className="step-content">
+                   <h3>Export</h3>
+                   <p>Click the <strong>Export to PDF</strong> button on the page or press <code style={{ fontSize: '0.9em' }}>Alt + P</code> (Option + P on Mac) to export instantly.</p>
+                 </div>
+               </div>
+             </div>
+             {renderNavButtons()}
+           </section>
+        )}
+
+        {activeTab === 'install' && (
           <section className="fade-in">
             <h1>Installation Guide</h1>
             <p className="lead">Follow these steps to install X Articles Exporter directly into your Chrome browser.</p>
@@ -77,8 +177,11 @@ export function Install() {
                 </div>
               </div>
             </div>
+            {renderNavButtons()}
           </section>
-        ) : (
+        )}
+        
+        {activeTab === 'build' && (
           <section className="fade-in">
             <h1>Build from Source</h1>
             <p className="lead">Developers can clone the repository and build the extension locally.</p>
@@ -149,6 +252,7 @@ export function Install() {
                 </div>
               </div>
             </div>
+            {renderNavButtons()}
           </section>
         )}
       </main>

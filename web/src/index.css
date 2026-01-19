@@ -577,3 +577,57 @@ code {
     text-align: center;
   }
 }
+
+/* Navigation Buttons */
+.doc-nav-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.nav-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  color: var(--text-main);
+  width: 100%;
+}
+
+.nav-card-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.nav-card-btn.right {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.nav-card-btn-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.nav-card-btn-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .doc-nav-buttons {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}

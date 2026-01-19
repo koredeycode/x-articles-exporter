@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
+import { Docs } from './pages/Docs'
 import { Home } from './pages/Home'
-import { Install } from './pages/Install'
 
 import { Footer } from './components/Footer'
 
@@ -10,7 +10,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/install" element={<Install />} />
+        <Route path="/docs" element={<Docs />} />
       </Routes>
       <Footer />
     </BrowserRouter>
