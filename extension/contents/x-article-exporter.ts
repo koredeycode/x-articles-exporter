@@ -459,7 +459,7 @@ async function handleExportClick() {
   button.disabled = true
   
   try {
-    const { generatePDF } = await import('./pdfGenerator')
+    const { generatePDF } = await import('./pdf-generator')
     const storage = await chrome.storage.sync.get('settings')
     const settings = storage.settings || { theme: 'light', pageSize: 'a4' }
     
