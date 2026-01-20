@@ -10,13 +10,16 @@ interface Settings {
   pageSize: 'a4' | 'letter'
   /** Font style for the PDF text */
   font: 'serif' | 'sans'
+  /** PDF Design style */
+  design: 'standard' | 'modern' | 'academic' | 'technical'
 }
 
 /** Default settings loaded on first run */
 const defaultSettings: Settings = {
   theme: 'light',
   pageSize: 'a4',
-  font: 'sans'
+  font: 'sans',
+  design: 'standard'
 }
 
 // Props for the generic CustomDropdown component
@@ -134,6 +137,21 @@ function IndexPopup() {
         <h2 className="settings-title">
           Settings
         </h2>
+
+        {/* Design Style */}
+        <div className="setting-row setting-row-border">
+          <span className="setting-label">Design Style</span>
+          <CustomDropdown 
+            value={settings.design}
+            options={[
+              { label: 'Standard', value: 'standard' },
+              { label: 'Modern', value: 'modern' },
+              { label: 'Academic', value: 'academic' },
+              { label: 'Technical', value: 'technical' }
+            ]}
+            onChange={(val) => updateSetting('design', val as any)}
+          />
+        </div>
 
         {/* Theme */}
         <div className="setting-row setting-row-border">

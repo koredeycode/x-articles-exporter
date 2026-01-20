@@ -66,6 +66,88 @@ export function Home() {
             Coming soon to Chrome Web Store     
           </div>
         </section>
+
+        <section className="features">
+          <div className="feature-card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <h2>Rich Visual Templates</h2>
+            <p>Choose from 4 professionally designed layouts to match your content's tone.</p>
+            <div className="template-grid">
+              {/* Standard */}
+              <div className="template-item">
+                <div className="preview-card standard">
+                  <div className="sidebar"></div>
+                  <div className="content">
+                     <div className="abstract-line title"></div>
+                     <div className="abstract-line long"></div>
+                     <div className="abstract-line medium"></div>
+                     <div className="abstract-line short"></div>
+                  </div>
+                  <div className="footer"></div>
+                </div>
+                <div>
+                  <h3 style={{ color: 'var(--primary)', marginBottom: '0.25rem', fontSize: '1.1rem' }}>Standard</h3>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>Classic design with branding sidebar.</p>
+                </div>
+              </div>
+
+              {/* Modern */}
+              <div className="template-item">
+                <div className="preview-card modern">
+                  <div className="hero"></div>
+                  <div className="title"></div>
+                  <div className="content">
+                    <div className="abstract-line long"></div>
+                    <div className="abstract-line long"></div>
+                    <div className="abstract-line medium"></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 style={{ color: 'var(--primary)', marginBottom: '0.25rem', fontSize: '1.1rem' }}>Modern</h3>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>Magazine layout, huge titles & images.</p>
+                </div>
+              </div>
+
+              {/* Academic */}
+              <div className="template-item">
+                <div className="preview-card academic">
+                  <div className="header"></div>
+                  <div className="content">
+                    <div className="abstract-line title"></div>
+                    <div className="abstract-line long"></div>
+                    <div className="abstract-line long"></div>
+                    <div className="abstract-line medium"></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 style={{ color: 'var(--primary)', marginBottom: '0.25rem', fontSize: '1.1rem' }}>Academic</h3>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>Formal serif, structured metadata.</p>
+                </div>
+              </div>
+
+              {/* Technical */}
+              <div className="template-item">
+                <div className="preview-card technical">
+                  <div className="header-bar">
+                    <div className="dot r"></div>
+                    <div className="dot y"></div>
+                    <div className="dot g"></div>
+                  </div>
+                  <div className="content">
+                    <div className="abstract-line title" style={{ background: '#58a6ff' }}></div>
+                    <div className="code-box">
+                      <div className="abstract-line medium" style={{ margin: 0 }}></div>
+                    </div>
+                    <div className="abstract-line long"></div>
+                  </div>
+                </div>
+                <div>
+                  <h3 style={{ color: 'var(--primary)', marginBottom: '0.25rem', fontSize: '1.1rem' }}>Technical</h3>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>Terminal aesthetic with boxed code.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </>
   )

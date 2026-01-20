@@ -14,10 +14,15 @@ A privacy-focused browser extension that allows you to save your favorite long-f
 - **Professional Formatting**: Generates a clean layout with a dedicated Title Page and Table of Contents.
 - **Rich Text Support**: Preserves bold, italic, and embedded links.
 - **Image Handling**: Automatically includes the cover image and inline images from the article.
+- **Rich Visual Templates**: Choose from 4 distinct, professional designs:
+  - **Standard**: Clean, branded layout with a colored sidebar.
+  - **Modern**: Magazine-style with a huge centered title and full-width hero image.
+  - **Academic**: Formal research paper layout with serif fonts and structured metadata.
+  - **Technical**: Developer-focused "terminal" aesthetic with monospace fonts and boxed content.
 - **Customization Options**:
   - **Theme**: Light and Dark modes.
   - **Page Size**: **A4** and **Letter** support with dynamic resizing (no clipping).
-  - **Font Style**: Toggle between **Serif** (Times) and **Sans-Serif** (Helvetica) for a personalized reading experience.
+  - **Font Style**: Toggle between **Serif** (Times) and **Sans-Serif** (Helvetica) for a personalized reading experience (Standard design only).
 - **Smart Metadata**: Captures author details, publication date, and original URL.
 - **Privacy First**: All processing happens locally in your browser. No data is sent to external servers.
 
@@ -32,9 +37,10 @@ A privacy-focused browser extension that allows you to save your favorite long-f
 3. **Click Export**: Look for the **"Export to PDF"** button injected into the bottom-right corner of the page.
    - *Shortcut*: You can also press `Alt + P` to trigger the export.
 4. **Customize**: Click the extension icon in your browser toolbar to change settings:
+   - **Design Style**: Select from Standard, Modern, Academic, or Technical.
    - **Theme**: Light / Dark
    - **Page Size**: A4 / Letter
-   - **Font Style**: Serif / Sans
+   - **Font Style**: Serif / Sans (Available in Standard Mode)
 
 ## 🛠️ Development
 

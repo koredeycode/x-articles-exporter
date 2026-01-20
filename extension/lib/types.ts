@@ -67,4 +67,6 @@ export interface Settings {
   pageSize: 'a4' | 'letter'
   /** Font style: 'serif' or 'sans'. */
   font: 'serif' | 'sans'
+  /** PDF Design style */
+  design: 'standard' | 'modern' | 'academic' | 'technical'
 }

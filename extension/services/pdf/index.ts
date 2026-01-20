@@ -1,8 +1,8 @@
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import type { ArticleMetadata, ContentBlock, Settings } from "../../lib/types"
-import { BASE_CONFIG, getFonts, getThemeColors } from './config'
-import { finalizeStandardPages, generateNotesPage, generateTitlePage, generateTOC } from './layout'
+import { BASE_CONFIG, getDesignConfig, getFonts, getThemeColors } from './config'
+import { finalizePages, generateNotesPage, generateTitlePage, generateTOC } from './layout'
 import { renderCodeBlock, renderFormattedBlock, renderImageBlock, renderTweetBlock, renderVideoBlock, type RenderContext } from './renderers'
 import { sanitizeText } from './utils'
 
@@ -33,18 +33,31 @@ export const generatePDF = async (
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   
+  // Get Design Config
+  const designConfig = getDesignConfig(settings.design)
+  
+  // Destructure fonts to prevent overwriting BASE_CONFIG.fonts (sizes)
+  // designFonts are font FAMILIES. config.fonts are font SIZES.
+  const { fonts: designFonts, ...restDesignConfig } = designConfig
+
   const config = {
       ...BASE_CONFIG,
+      ...restDesignConfig,
       pageWidth,
       pageHeight,
-      contentWidth: pageWidth - BASE_CONFIG.contentStart - BASE_CONFIG.margin
+      contentWidth: pageWidth - designConfig.contentStart - BASE_CONFIG.margin
   }
   
   onProgress?.('Preparing PDF...')
 
   const isDark = settings.theme === 'dark'
   const colors = getThemeColors(settings.theme)
-  const fonts = getFonts(settings.font)
+  
+  // Custom Font Logic: Standard design respects font setting, others force design font
+  let fonts = designFonts
+  if (settings.design === 'standard') {
+      fonts = getFonts(settings.font)
+  }
 
   // --- 1. Title Page ---
   onProgress?.('Generating Title Page...')
@@ -58,7 +71,7 @@ export const generatePDF = async (
   doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
   
   let currentPageIndex = 2
-  let contentY = config.margin
+  let contentY = config.margin + (config.headerOffset || 0)
   
   const tocEntries: { text: string, page: number, level: number }[] = []
   
@@ -68,7 +81,7 @@ export const generatePDF = async (
       currentPageIndex++
       doc.setFillColor(colors.bg)
       doc.rect(0, 0, config.pageWidth, config.pageHeight, 'F')
-      return config.margin
+      return config.margin + (config.headerOffset || 0)
   }
 
   // Iterate Blocks
@@ -199,7 +212,7 @@ export const generatePDF = async (
 
   // --- 4. Page Finalization (Footers/Sidebars) ---
   onProgress?.('Finalizing Pages...')
-  finalizeStandardPages(doc, metadata, config, colors, fonts, isDark)
+  finalizePages(doc, metadata, config, colors, fonts, isDark)
   
   // --- 5. Notes Page ---
   onProgress?.('Generating Notes Page...')

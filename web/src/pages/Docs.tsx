@@ -121,10 +121,17 @@ export function Docs() {
 
                <div className="step">
                  <div className="step-number">03</div>
-                 <div className="step-content">
-                   <h3>Customize Settings</h3>
-                   <p>Select your preferred <strong>Theme</strong> (Light/Dark) and <strong>Page Size</strong> (A4/Letter) from the dropdown menus.</p>
-                 </div>
+                  <div className="step-content">
+                    <h3>Customize Settings</h3>
+                    <p>
+                      Click the extension icon to customize:
+                      <ul style={{ paddingLeft: '1.2rem', marginTop: '0.5rem', marginBottom: 0 }}>
+                        <li><strong>Design</strong>: Standard, Modern, Academic, Technical</li>
+                        <li><strong>Theme</strong>: Light / Dark</li>
+                        <li><strong>Size</strong>: A4 / Letter</li>
+                      </ul>
+                    </p>
+                  </div>
                </div>
 
                <div className="step">
