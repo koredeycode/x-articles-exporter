@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import type { ContentBlock, TextSegment } from '../../lib/types'
+import { getImageFormatFromDataUrl } from '../../lib/utils'
 import type { ThemeColors } from './config'
 import { splitTextToWidth } from './utils'
 
@@ -25,6 +26,7 @@ export const renderFormattedBlock = (
 ): number => {
      const { doc, fonts } = ctx
      let currentPageYStart = ctx.currentY
+     const lineFactor = ctx.config.lineHeightFactor ?? 1.15
      
      // Helper to handle page breaks via callback
      const checkAndAddPage = (currentY: number, lh: number): number => {
@@ -59,7 +61,7 @@ export const renderFormattedBlock = (
          const lines = splitTextToWidth(doc, text, maxWidth, fontSize)
          
          let curY = ctx.currentY
-         const lh = fontSize * 0.3527 * 1.5
+         const lh = fontSize * 0.3527 * lineFactor
          
          for (const line of lines) {
              curY = checkAndAddPage(curY, lh)
@@ -73,7 +75,7 @@ export const renderFormattedBlock = (
      
      let cursorX = startX
      let cursorY = ctx.currentY
-     const lineHeight = fontSize * 0.3527 * 1.5
+     const lineHeight = fontSize * 0.3527 * lineFactor
      
      for (const seg of segments) {
         let fontStyle = 'normal'
@@ -108,7 +110,7 @@ export const renderFormattedBlock = (
 export const renderImageBlock = (ctx: RenderContext, block: ContentBlock, x: number, width: number): number => {
     if (!block.src) return ctx.currentY
     try {
-        const maxH = 120
+        const maxH = ctx.config.maxImageHeight ?? 65
         const props = ctx.doc.getImageProperties(block.src)
         const ratio = props.height / props.width
         let w = width
@@ -119,9 +121,10 @@ export const renderImageBlock = (ctx: RenderContext, block: ContentBlock, x: num
             ctx.currentY = ctx.onPageBreak(ctx.currentY)
         }
         
-        ctx.doc.addImage(block.src, 'JPEG', x, ctx.currentY, w, h)
-        return ctx.currentY + h + 10
+        ctx.doc.addImage(block.src, getImageFormatFromDataUrl(block.src), x, ctx.currentY, w, h)
+        return ctx.currentY + h + (ctx.config.spacing?.afterImage ?? 3)
     } catch (e) {
+        console.warn('[X Articles Exporter] Failed to render image block:', e)
         return ctx.currentY
     }
 }
@@ -129,7 +132,7 @@ export const renderImageBlock = (ctx: RenderContext, block: ContentBlock, x: num
 export const renderVideoBlock = (ctx: RenderContext, block: ContentBlock, x: number, width: number): number => {
     if (!block.src) return ctx.currentY
     try {
-        const maxH = 120
+        const maxH = ctx.config.maxImageHeight ?? 65
         const props = ctx.doc.getImageProperties(block.src)
         const ratio = props.height / props.width
         let w = width
@@ -141,7 +144,7 @@ export const renderVideoBlock = (ctx: RenderContext, block: ContentBlock, x: num
         }
 
         // Draw Poster
-        ctx.doc.addImage(block.src, 'JPEG', x, ctx.currentY, w, h)
+        ctx.doc.addImage(block.src, getImageFormatFromDataUrl(block.src), x, ctx.currentY, w, h)
         
         // Draw Play Overlay
         ctx.doc.setFillColor(0, 0, 0)
@@ -164,29 +167,30 @@ export const renderVideoBlock = (ctx: RenderContext, block: ContentBlock, x: num
             ctx.doc.link(x, ctx.currentY, w, h, { url: block.link })
         }
 
-        return ctx.currentY + h + 10
+        return ctx.currentY + h + (ctx.config.spacing?.afterImage ?? 3)
     } catch (e) {
         return ctx.currentY
     }
 }
 
 export const renderTweetBlock = (ctx: RenderContext, block: ContentBlock, x: number, width: number): number => {
-   const CARD_PADDING = 10
+   const CARD_PADDING = 5
    const CARD_W = width
+   const bodySize = ctx.config.fonts?.body ?? 8
    
    // Calculate Exact Height First
    ctx.doc.setFont(ctx.fonts.body, 'normal')
-   ctx.doc.setFontSize(10)
+   ctx.doc.setFontSize(bodySize)
    
    let textHeight = 0
    let splitText: string[] = []
    
    if (block.text) {
        splitText = ctx.doc.splitTextToSize(block.text, CARD_W - (CARD_PADDING * 2))
-       textHeight = (splitText.length * 5) // Line height approx
+       textHeight = (splitText.length * 3.5)
    }
    
-   const headerHeight = 16 
+   const headerHeight = 10 
    const totalCardHeight = headerHeight + textHeight + (CARD_PADDING * 2)
    
    if (ctx.currentY + totalCardHeight > ctx.config.pageHeight - ctx.config.margin) {
@@ -204,24 +208,24 @@ export const renderTweetBlock = (ctx: RenderContext, block: ContentBlock, x: num
    
    // Author
    ctx.doc.setFont(ctx.fonts.ui, 'bold')
-   ctx.doc.setFontSize(10)
+   ctx.doc.setFontSize(bodySize)
    ctx.doc.setTextColor(ctx.colors.text)
    ctx.doc.text(block.author || (block.handle || 'Tweet'), x + CARD_PADDING, innerY)
    
    if (block.handle) {
        ctx.doc.setFont(ctx.fonts.ui, 'normal')
        ctx.doc.setTextColor(ctx.colors.secondary)
-       ctx.doc.text(` ${block.handle}`, x + CARD_PADDING + ctx.doc.getTextWidth(block.author || '') + 2, innerY)
+       ctx.doc.text(` ${block.handle}`, x + CARD_PADDING + ctx.doc.getTextWidth(block.author || '') + 1, innerY)
    }
-   innerY += 6
+   innerY += 4
 
    // Text
    ctx.doc.setFont(ctx.fonts.body, 'normal')
-   ctx.doc.setFontSize(10)
+   ctx.doc.setFontSize(bodySize)
    ctx.doc.setTextColor(ctx.colors.text)
    
    if (block.text && splitText.length > 0) {
-       ctx.doc.text(splitText, x + CARD_PADDING, innerY + 4)
+       ctx.doc.text(splitText, x + CARD_PADDING, innerY + 2)
    }
 
    // Link
@@ -229,19 +233,21 @@ export const renderTweetBlock = (ctx: RenderContext, block: ContentBlock, x: num
        ctx.doc.link(x, startY, CARD_W, totalCardHeight, { url: block.link })
    }
    
-   return startY + totalCardHeight + 10
+   return startY + totalCardHeight + (ctx.config.spacing?.afterTweet ?? 4)
 }
 
 export const renderCodeBlock = (ctx: RenderContext, block: ContentBlock, x: number, width: number, isDark: boolean): number => {
-    const CODE_PADDING = 10
+    const CODE_PADDING = 5
     const CODE_BG_COLOR = isDark ? '#1F2937' : '#F7F9F9' 
     const CODE_TEXT_COLOR = isDark ? '#E5E7EB' : '#374151'
+    const codeSize = ctx.config.fonts?.code ?? 7
+    const codeLineHeight = 3
     
     ctx.doc.setFont('courier', 'normal')
-    ctx.doc.setFontSize(10)
+    ctx.doc.setFontSize(codeSize)
     
     const codeLines = ctx.doc.splitTextToSize(block.text || '', width - (CODE_PADDING * 2))
-    const codeHeight = (codeLines.length * 4) + (CODE_PADDING * 2) 
+    const codeHeight = (codeLines.length * codeLineHeight) + (CODE_PADDING * 2) 
     
     // Check page break
     if (ctx.currentY + codeHeight > ctx.config.pageHeight - ctx.config.margin) {
@@ -255,21 +261,21 @@ export const renderCodeBlock = (ctx: RenderContext, block: ContentBlock, x: numb
     // Language Label
     if (block.language) {
         ctx.doc.setFont(ctx.fonts.ui, 'bold')
-        ctx.doc.setFontSize(8)
+        ctx.doc.setFontSize(6)
         ctx.doc.setTextColor(ctx.colors.secondary)
-        ctx.doc.text(block.language.toUpperCase(), x + width - 10, ctx.currentY + 8, { align: 'right' })
+        ctx.doc.text(block.language.toUpperCase(), x + width - 6, ctx.currentY + 5, { align: 'right' })
     }
     
     // Code Text
     ctx.doc.setFont('courier', 'normal')
-    ctx.doc.setFontSize(10)
+    ctx.doc.setFontSize(codeSize)
     ctx.doc.setTextColor(CODE_TEXT_COLOR)
     
-    let codeY = ctx.currentY + CODE_PADDING + 2
+    let codeY = ctx.currentY + CODE_PADDING + 1
     for (const line of codeLines) {
         ctx.doc.text(line, x + CODE_PADDING, codeY)
-        codeY += 4
+        codeY += codeLineHeight
     }
     
-    return ctx.currentY + codeHeight + 6
+    return ctx.currentY + codeHeight + (ctx.config.spacing?.afterCodeBlock ?? 2.5)
 }

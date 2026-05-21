@@ -16,6 +16,63 @@ export function sanitizeText(text: string): string {
  * @param {string} text - Text to display on the placeholder.
  * @returns {string} Base64 data URL of the generated placeholder image.
  */
+const BACKGROUND_IMAGE_URL_RE = /url\(["']?(.*?)["']?\)/
+
+export function sanitizeImageUrl(url: string): string {
+  return url
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '')
+    .trim()
+}
+
+export function normalizeTwitterImageUrl(url: string): string {
+  const cleaned = sanitizeImageUrl(url)
+  try {
+    const parsed = new URL(cleaned)
+    if (parsed.hostname.includes('twimg.com')) {
+      parsed.searchParams.set('name', 'large')
+    }
+    return parsed.toString()
+  } catch {
+    return cleaned.replace(/name=(small|medium|thumb)/, 'name=large')
+  }
+}
+
+function extractBackgroundImageUrl(el: HTMLElement | null): string | null {
+  if (!el) return null
+  const inlineMatch = el.style.backgroundImage.match(BACKGROUND_IMAGE_URL_RE)
+  if (inlineMatch?.[1]) return inlineMatch[1]
+
+  const computedMatch = window.getComputedStyle(el).backgroundImage.match(BACKGROUND_IMAGE_URL_RE)
+  return computedMatch?.[1] || null
+}
+
+export function resolveTweetPhotoUrl(photo: Element): string | null {
+  const root = photo.matches('[data-testid="tweetPhoto"]')
+    ? photo
+    : photo.closest('[data-testid="tweetPhoto"]') || photo
+
+  const img = root.querySelector('img') as HTMLImageElement | null
+  const bgEl = root.querySelector('[style*="background-image"]') as HTMLElement | null
+  const bgUrl = extractBackgroundImageUrl(bgEl)
+    || extractBackgroundImageUrl(root as HTMLElement)
+
+  const src = img?.currentSrc || img?.src
+  const isPlaceholder = !src
+    || src.startsWith('data:image/gif')
+    || src === window.location.href
+
+  const url = (!isPlaceholder ? src : null) || bgUrl
+  return url ? normalizeTwitterImageUrl(url) : null
+}
+
+export function getImageFormatFromDataUrl(src: string): 'JPEG' | 'PNG' | 'WEBP' | 'GIF' {
+  if (src.startsWith('data:image/png')) return 'PNG'
+  if (src.startsWith('data:image/webp')) return 'WEBP'
+  if (src.startsWith('data:image/gif')) return 'GIF'
+  return 'JPEG'
+}
+
 export function createPlaceholderImage(text: string = 'Image Failed'): string {
   try {
     const canvas = document.createElement('canvas')
@@ -56,37 +113,94 @@ export function createPlaceholderImage(text: string = 'Image Failed'): string {
   }
 }
 
+async function loadImageAsDataUrl(url: string, timeoutMs = 12000): Promise<string | null> {
+  const normalizedUrl = normalizeTwitterImageUrl(url)
+  const preferPng = normalizedUrl.includes('format=png')
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.referrerPolicy = 'no-referrer'
+
+    const timer = setTimeout(() => {
+      cleanup()
+      resolve(null)
+    }, timeoutMs)
+
+    const cleanup = () => {
+      clearTimeout(timer)
+      img.onload = null
+      img.onerror = null
+    }
+
+    img.onload = () => {
+      cleanup()
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(null)
+          return
+        }
+        ctx.drawImage(img, 0, 0)
+        resolve(canvas.toDataURL(preferPng ? 'image/png' : 'image/jpeg', 0.92))
+      } catch (err) {
+        console.warn('[X Articles Exporter] Canvas export failed:', normalizedUrl, err)
+        resolve(null)
+      }
+    }
+
+    img.onerror = () => {
+      cleanup()
+      resolve(null)
+    }
+
+    img.src = normalizedUrl
+  })
+}
+
+async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  const normalizedUrl = normalizeTwitterImageUrl(url)
+  const response = await fetch(normalizedUrl, { referrerPolicy: 'no-referrer' })
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+  const blob = await response.blob()
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.readAsDataURL(blob)
+  })
+}
+
 /**
- * Fetches an image from a URL and converts it to a Base64 string.
- * Retries up to `retries` times on failure.
- * @param {string} url - The URL of the image.
- * @param {number} retries - Number of retry attempts.
- * @returns {Promise<string | null>} Base64 string or null/placeholder on failure.
+ * Loads an image from a URL and converts it to a Base64 string.
+ * Uses Image+canvas first (works with twimg CORS), fetch as fallback.
  */
 export async function convertImageToBase64(url: string, retries = 3): Promise<string | null> {
   let attempt = 0
   while (attempt < retries) {
-    try {
-      const response = await fetch(url)
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      
-      const blob = await response.blob()
-      return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
-    } catch (err) {
-      attempt++
-      console.warn(`[X Articles Exporter] Image load failed (Attempt ${attempt}/${retries}):`, url, err)
-      
-      if (attempt >= retries) {
-          console.error('[X Articles Exporter] Failed to load image after retries:', url)
-          return createPlaceholderImage('Image Could Not Load')
+    let dataUrl = await loadImageAsDataUrl(url)
+    if (!dataUrl) {
+      try {
+        dataUrl = await fetchImageAsDataUrl(url)
+      } catch (err) {
+        console.warn(`[X Articles Exporter] Fetch fallback failed (Attempt ${attempt + 1}/${retries}):`, url, err)
       }
-      // Simple backoff: 1s, 2s...
-      await new Promise(r => setTimeout(r, 1000 * attempt))
     }
+
+    if (dataUrl) return dataUrl
+
+    attempt++
+    console.warn(`[X Articles Exporter] Image load failed (Attempt ${attempt}/${retries}):`, url)
+
+    if (attempt >= retries) {
+      console.error('[X Articles Exporter] Failed to load image after retries:', url)
+      return createPlaceholderImage('Image Could Not Load')
+    }
+
+    await new Promise(r => setTimeout(r, 1000 * attempt))
   }
   return null
 }

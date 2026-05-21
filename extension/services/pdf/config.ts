@@ -3,18 +3,29 @@
  * These values can be dynamic adjusted based on page size.
  */
 export const BASE_CONFIG = {
-  margin: 25, // Increased from 20 to prevent header overlap in Academic/Technical layouts
-  /** Width of the colored sidebar on the left. */
-  sidebarWidth: 35, 
-  /** X-coordinate where content starts (sidebar + padding). */
-  contentStart: 50, 
-  lineHeight: 7,
+  margin: 14,
+  sidebarWidth: 22,
+  contentStart: 32,
+  lineHeight: 4.5,
+  lineHeightFactor: 1.15,
+  maxImageHeight: 65,
+  spacing: {
+    afterHeading1: 1.5,
+    afterHeading2: 1,
+    afterParagraph: 1.5,
+    afterBlockquote: 2.5,
+    afterListItem: 0.8,
+    afterImage: 3,
+    afterCodeBlock: 2.5,
+    afterTweet: 4
+  },
   fonts: {
-    title: 24,
-    heading1: 18,
-    heading2: 14,
-    body: 11,
-    caption: 9
+    title: 16,
+    heading1: 11,
+    heading2: 9,
+    body: 8,
+    caption: 7,
+    code: 7
   },
   themes: {
     light: {
@@ -69,8 +80,8 @@ const DESIGNS: Record<string, DesignConfig> = {
     standard: {
         name: 'Standard',
         template: 'standard',
-        sidebarWidth: 35,
-        contentStart: 50,
+        sidebarWidth: 22,
+        contentStart: 32,
         fonts: { title: 'helvetica', body: 'helvetica', heading: 'helvetica', ui: 'helvetica' },
         showSidebar: true,
         layout: { titlePage: 'classic', footer: 'detailed', useHorizontalRules: false, useBoxedContent: false }
@@ -80,7 +91,7 @@ const DESIGNS: Record<string, DesignConfig> = {
         name: 'Modern (Magazine)',
         template: 'modern',
         sidebarWidth: 0,
-        contentStart: 25,
+        contentStart: 14,
         fonts: { title: 'helvetica', body: 'helvetica', heading: 'helvetica', ui: 'helvetica' },
         showSidebar: false,
         layout: { titlePage: 'modern', footer: 'minimal', useHorizontalRules: false, useBoxedContent: false }
@@ -90,8 +101,8 @@ const DESIGNS: Record<string, DesignConfig> = {
         name: 'Academic (Paper)',
         template: 'academic',
         sidebarWidth: 0,
-        contentStart: 25,
-        headerOffset: 15,
+        contentStart: 14,
+        headerOffset: 8,
         fonts: { title: 'times', body: 'times', heading: 'times', ui: 'times' },
         showSidebar: false,
         layout: { titlePage: 'formal', footer: 'simple', useHorizontalRules: true, useBoxedContent: false }
@@ -101,7 +112,7 @@ const DESIGNS: Record<string, DesignConfig> = {
         name: 'Technical (Docs)',
         template: 'technical',
         sidebarWidth: 0,
-        contentStart: 20,
+        contentStart: 12,
         fonts: { title: 'courier', body: 'courier', heading: 'courier', ui: 'courier' },
         showSidebar: false,
         layout: { titlePage: 'technical', footer: 'simple', useHorizontalRules: false, useBoxedContent: true }

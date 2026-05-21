@@ -1,7 +1,7 @@
 {
   "name": "x-article-exporter",
   "displayName": "X Article Exporter",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Export X (Twitter) Articles to professionally formatted PDFs with one click. Features rich text support, clickable TOC, and dark mode.",
   "author": "korecodes",
   "scripts": {

@@ -118,7 +118,7 @@ export const generatePDF = async (
               text: block.text || '', page: currentPageIndex, level: 1 
            })
            contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS, MAX_W, config.fonts.heading1, colors.text)
-           contentY += 3
+           contentY += config.spacing?.afterHeading1 ?? 1.5
            break
            
         case 'heading2':
@@ -128,18 +128,18 @@ export const generatePDF = async (
               text: block.text || '', page: currentPageIndex, level: 2 
            })
            contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS, MAX_W, config.fonts.heading2, colors.text)
-           contentY += 2
+           contentY += config.spacing?.afterHeading2 ?? 1
            break
            
         case 'paragraph':
            doc.setFontSize(config.fonts.body)
            contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS, MAX_W, config.fonts.body, colors.text)
-           contentY += 4
+           contentY += config.spacing?.afterParagraph ?? 1.5
            break
            
         case 'blockquote':
            // Use built-in border support with cleaner indentation
-           const INDENT = 8 
+           const INDENT = 5 
            const BLOCK_Start = X_POS + INDENT
            
            contentY = renderFormattedBlock(
@@ -152,19 +152,21 @@ export const generatePDF = async (
                colors.secondary,
                { borderLeftColor: colors.accent }
            )
-           contentY += 6
+           contentY += config.spacing?.afterBlockquote ?? 2.5
            break
            
         case 'list-item-unordered':
+           doc.setFontSize(config.fonts.body)
            doc.text('•', X_POS, contentY)
-           contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS + 6, MAX_W - 6, config.fonts.body, colors.text)
-           contentY += 2
+           contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS + 4, MAX_W - 4, config.fonts.body, colors.text)
+           contentY += config.spacing?.afterListItem ?? 0.8
            break
         
         case 'list-item-ordered':
+           doc.setFontSize(config.fonts.body)
            doc.text('-', X_POS, contentY)
-           contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS + 6, MAX_W - 6, config.fonts.body, colors.text)
-           contentY += 2
+           contentY = renderFormattedBlock(ctx, block.segments, block.text, X_POS + 4, MAX_W - 4, config.fonts.body, colors.text)
+           contentY += config.spacing?.afterListItem ?? 0.8
            break
 
         case 'image':
@@ -193,8 +195,8 @@ export const generatePDF = async (
   })
 
   // Calculate TOC pages
-  const ENTRY_HEIGHT = 12
-  const TOC_TITLE_HEIGHT = 40
+  const ENTRY_HEIGHT = 8
+  const TOC_TITLE_HEIGHT = 24
   const AVAILABLE_HEIGHT = config.pageHeight - 2 * config.margin
   const totalTocHeight = TOC_TITLE_HEIGHT + (tocEntries.length * ENTRY_HEIGHT)
   const tocPagesCount = Math.ceil(totalTocHeight / AVAILABLE_HEIGHT) || 1

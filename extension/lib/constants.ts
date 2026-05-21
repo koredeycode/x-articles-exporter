@@ -7,7 +7,7 @@ export const SELECTORS = {
   articleTitle: '[data-testid="twitter-article-title"]',
   userName: '[data-testid="User-Name"]',
   richTextView: '[data-testid="twitterArticleRichTextView"]',
-  articleImage: '[data-testid="tweetPhoto"] img',
+  articleImage: '[data-testid="tweetPhoto"]',
   tweetTime: 'time[datetime]',
   videoPlayer: '[data-testid="videoPlayer"]',
   tweet: '[data-testid="tweet"]',

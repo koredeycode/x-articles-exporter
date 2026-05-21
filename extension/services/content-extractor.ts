@@ -1,6 +1,64 @@
 import { SELECTORS } from "../lib/constants"
 import type { ArticleMetadata, ContentBlock } from "../lib/types"
-import { convertImageToBase64, extractRichText } from "../lib/utils"
+import { convertImageToBase64, extractRichText, normalizeTwitterImageUrl, resolveTweetPhotoUrl } from "../lib/utils"
+
+async function waitForImage(img: HTMLImageElement, timeoutMs = 1500): Promise<void> {
+  if (img.complete && img.naturalWidth > 0) return
+
+  await new Promise<void>((resolve) => {
+    const done = () => resolve()
+    img.addEventListener('load', done, { once: true })
+    img.addEventListener('error', done, { once: true })
+    setTimeout(done, timeoutMs)
+  })
+}
+
+function findScrollContainer(el: Element): Element {
+  let node: Element | null = el
+  while (node && node !== document.documentElement) {
+    const style = window.getComputedStyle(node)
+    const canScroll = ['auto', 'scroll', 'overlay'].includes(style.overflowY)
+      && node.scrollHeight > node.clientHeight + 1
+    if (canScroll) return node
+    node = node.parentElement
+  }
+  return document.scrollingElement || document.documentElement
+}
+
+/**
+ * Scrolls through the article so X lazy-loads tweetPhoto nodes and image bytes.
+ */
+async function preloadArticleImages(container: Element, onProgress?: (status: string) => void): Promise<void> {
+  const scrollEl = findScrollContainer(container)
+  const originalScrollTop = scrollEl.scrollTop
+  const originalWindowY = window.scrollY
+  const step = Math.max(scrollEl.clientHeight * 0.8, 400)
+  const maxScroll = Math.max(
+    scrollEl.scrollHeight - scrollEl.clientHeight,
+    document.documentElement.scrollHeight - window.innerHeight
+  )
+
+  onProgress?.('Loading article images...')
+  for (let y = 0; y <= maxScroll; y += step) {
+    scrollEl.scrollTop = y
+    window.scrollTo(0, y)
+    await new Promise(resolve => setTimeout(resolve, 300))
+  }
+
+  const photos = Array.from(container.querySelectorAll('[data-testid="tweetPhoto"]'))
+  onProgress?.(`Loading ${photos.length} images...`)
+
+  for (const photo of photos) {
+    photo.scrollIntoView({ block: 'center', behavior: 'instant' })
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    const img = photo.querySelector('img')
+    if (img) await waitForImage(img)
+  }
+
+  scrollEl.scrollTop = originalScrollTop
+  window.scrollTo(0, originalWindowY)
+}
 
 /**
  * Checks if the current page is an X Article or Status page.
@@ -48,20 +106,35 @@ export async function extractArticleContent(onProgress?: (status: string) => voi
 
   onProgress?.('Analysing content...')
 
-  // Detect Cover Image
   const articleView = document.querySelector(SELECTORS.articleView)
+  const preloadRoot = articleView || richTextView
+  await preloadArticleImages(preloadRoot, onProgress)
+
+  // Detect Cover Image (hero image is often outside richTextView)
   if (articleView) {
-     const allImages = Array.from(articleView.querySelectorAll('img'))
-     for (const img of allImages) {
-        if (img.width < 200 || img.height < 100) continue
-        if (img.src.includes('profile_images')) continue
-        if (img.closest(SELECTORS.userName)) continue
-        
-        const base64 = await convertImageToBase64(img.src)
-        if (base64) {
-          coverImage = base64
-          break
-        }
+     const coverPhoto = articleView.querySelector('[data-testid="tweetPhoto"]')
+     const coverUrl = coverPhoto ? resolveTweetPhotoUrl(coverPhoto) : null
+     if (coverUrl) {
+        coverImage = await convertImageToBase64(coverUrl)
+     }
+
+     if (!coverImage) {
+       const allImages = Array.from(articleView.querySelectorAll('img'))
+       for (const img of allImages) {
+          if (img.width < 200 || img.height < 100) continue
+          if (img.src.includes('profile_images')) continue
+          if (img.closest(SELECTORS.userName)) continue
+
+          const url = resolveTweetPhotoUrl(img.closest('[data-testid="tweetPhoto"]') || img)
+          const src = url || (img.src ? normalizeTwitterImageUrl(img.src) : null)
+          if (!src) continue
+
+          const base64 = await convertImageToBase64(src)
+          if (base64) {
+            coverImage = base64
+            break
+          }
+       }
      }
   }
   
@@ -173,22 +246,22 @@ export async function extractArticleContent(onProgress?: (status: string) => voi
   let processedImages = 0
   const totalImages = contentImages.length
 
-  for (const img of contentImages) {
+  for (const photo of contentImages) {
      if (totalImages > 0) {
         onProgress?.(`Processing Images (${processedImages}/${totalImages})...`)
      }
 
-     const src = (img as HTMLImageElement).src
+     const src = resolveTweetPhotoUrl(photo)
      if (!src) continue
 
      // Deduplicate: Skip images inside video players or embedded tweets
-     if (img.closest(SELECTORS.videoPlayer) || img.closest(SELECTORS.tweet)) continue
+     if (photo.closest(SELECTORS.videoPlayer) || photo.closest(SELECTORS.tweet)) continue
      
      const base64 = await convertImageToBase64(src)
      if (base64) {
        items.push({
           block: { type: 'image', src: base64 },
-          node: img
+          node: photo
        })
      }
      processedImages++
